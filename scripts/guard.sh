@@ -186,7 +186,7 @@ has_arg() { # has_arg <pattern>...: one of the remaining words matches
 }
 git_ok() { # git_ok <sub>
   case "$1" in
-    ''|push|status|diff|log|show|rev-parse|symbolic-ref|ls-files|ls-tree|ls-remote|check-ignore|merge-base|add|rm|mv|blame|grep|describe|cat-file|for-each-ref|rev-list|shortlog|name-rev|show-ref|diff-tree|diff-files|diff-index|help|version|--version) return 0 ;;
+    ''|push|status|diff|log|show|rev-parse|symbolic-ref|ls-files|ls-tree|ls-remote|check-ignore|merge-base|merge-tree|add|rm|mv|blame|grep|describe|cat-file|for-each-ref|rev-list|shortlog|name-rev|show-ref|diff-tree|diff-files|diff-index|help|version|--version) return 0 ;;
     commit) [ -z "$state" ] && return 1; has_arg --amend && return 1; return 0 ;;
     # Switching and fetching are safe unless forced: -f / --discard-changes
     # throw away local changes, -C / -B reset an existing branch, and a
