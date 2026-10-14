@@ -20,10 +20,13 @@
 # Log (the commits are still there) and moves Review and PR. --keep-log
 # keeps the Implementation Log too when going back further (the work goes
 # on on the same branch). Prints the history file. Refuses a done or
-# canceled run.
+# canceled run, and a phase after the current one (rewinding to the current
+# phase is fine: plan:awaiting-approval -> plan). Only the six fixed
+# headings start a section (lib.sh), so "## " lines quoted in a fence stay
+# with their section.
 #
-# Exit: 0 ok, 1 no such run, 2 usage or invalid value, 3 run already exists,
-#       4 the run is done or canceled.
+# Exit: 0 ok, 1 no such run, 2 usage or invalid value (a phase after the
+#       current one, too), 3 run already exists, 4 the run is done or canceled.
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -57,8 +60,7 @@ put() {
   cat "$tmp" > "$1"; rm -f "$tmp"
 }
 
-# The sections of state.md in phase order, and their empty placeholders.
-SECTIONS="Research|Approach|Plan|Implementation Log|Review|PR"
+# The empty placeholders of the sections (STATE_SECTIONS in lib.sh).
 placeholder() {
   case "$1" in
     Research) echo '<!-- Phase 1: organized understanding of the ticket + relevant context -->' ;;
@@ -138,35 +140,45 @@ EOF
     f=$(sfile "$id"); [ -f "$f" ] || { echo "no run: $id" >&2; exit 1; }
     before=$(field "$f" Status)
     case $before in done|canceled) echo "run $id is $before: it cannot be rewound" >&2; exit 4 ;; esac
+    # Phases in order; target is the section that gets the note.
     case $phase in
-      research) from=1; target=Research ;;
-      approach) from=2; target=Approach ;;
-      plan) from=3; target=Plan ;;
-      implement) from=5; target='Implementation Log'; keep=1 ;;
+      research) from=1; target=1 ;;
+      approach) from=2; target=2 ;;
+      plan) from=3; target=3 ;;
+      implement) from=5; target=4; keep=1 ;;
       *) echo "cannot rewind to: $phase (research, approach, plan, implement)" >&2; exit 2 ;;
     esac
+    case ${before%%:*} in
+      research) at=1 ;; approach) at=2 ;; plan) at=3 ;; implement) at=4 ;; review) at=5 ;; *) at=6 ;;
+    esac
+    if [ "$target" -gt "$at" ]; then
+      echo "cannot rewind to $phase: run $id is at $before (rewind goes back, not forward)" >&2; exit 2
+    fi
     now=$(flow_now)
-    hist="$(dirname "$f")/history/$(date '+%Y%m%d-%H%M%S').md"
+    # Two rewinds in the same second must not share a file (awk truncates it).
+    stamp=$(date '+%Y%m%d-%H%M%S'); hist="$(dirname "$f")/history/$stamp.md"; i=2
+    while [ -e "$hist" ]; do hist="$(dirname "$f")/history/$stamp-$i.md"; i=$((i + 1)); done
     mkdir -p "$(dirname "$hist")"
     tmp=$(mktemp) || exit 1
-    # Section n (1-based in SECTIONS) moves when n >= from, except the
-    # Implementation Log (4) with --keep-log.
-    awk -v from="$from" -v keep="$keep" -v target="$target" -v hist="$hist" \
-        -v head="# Rewound to $phase ($now)" -v was="Status before: $before" \
-        -v why="$reason" -v note="> 巻き戻し（${now}）：${reason}" -v names="$SECTIONS" \
+    # Section n (1-based in STATE_SECTIONS) moves when n >= from, except the
+    # Implementation Log (4) with --keep-log. Text goes in through ENVIRON:
+    # awk -v would turn the \t of C:\temp into a tab.
+    RW_HIST=$hist RW_HEAD="# Rewound to $phase ($now)" RW_WAS="Status before: $before" \
+    RW_WHY=$reason RW_NOTE="> 巻き戻し（${now}）：${reason}" \
+    awk -v from="$from" -v keep="$keep" -v target="$target" \
         -v ph1="$(placeholder Research)" -v ph2="$(placeholder Approach)" -v ph3="$(placeholder Plan)" \
-        -v ph4="$(placeholder 'Implementation Log')" -v ph5="$(placeholder Review)" -v ph6="$(placeholder PR)" '
+        -v ph4="$(placeholder 'Implementation Log')" -v ph5="$(placeholder Review)" -v ph6="$(placeholder PR)" "$_section_awk"'
       BEGIN {
-        n = split(names, order, "|"); for (i = 1; i <= n; i++) idx[order[i]] = i
+        hist = ENVIRON["RW_HIST"]; why = ENVIRON["RW_WHY"]
         ph[1] = ph1; ph[2] = ph2; ph[3] = ph3; ph[4] = ph4; ph[5] = ph5; ph[6] = ph6
-        print head > hist; print "" > hist; print was > hist
+        print ENVIRON["RW_HEAD"] > hist; print "" > hist; print ENVIRON["RW_WAS"] > hist
         if (why != "") print "Reason: " why > hist
       }
-      /^## / {
-        name = substr($0, 4); cur = (name in idx) ? idx[name] : 0
+      { cur = heading_index($0) }
+      cur {
         moving = cur >= from && !(cur == 4 && keep != "")
         print
-        if (name == target && why != "") print note
+        if (cur == target + 0 && why != "") print ENVIRON["RW_NOTE"]
         if (moving) { print "" > hist; print $0 > hist; print ph[cur]; print "" }
         next
       }

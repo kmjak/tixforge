@@ -177,11 +177,28 @@ awk '$0 == "## Implementation Log" { print; print "kept log"; next } { print }' 
 st rewind LT-000009 approach --keep-log >/dev/null
 has "kept log" "$(cat "$f9")" "--keep-log keeps the Implementation Log"
 awk '$0 == "## Review" { print; print "a review"; next } { print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
-sleep 1
+st rewind LT-000009 implement 2>/dev/null; eq 2 $? "cannot rewind forward (approach -> implement)"
+eq approach:in-progress "$(st get LT-000009)" "a refused rewind leaves the Status"
+st set LT-000009 Status review:in-progress >/dev/null
 st rewind LT-000009 implement >/dev/null
 has "kept log" "$(cat "$f9")" "rewinding to implement keeps the log"
 case "$(cat "$f9")" in *"a review"*) ng "rewinding to implement moves Review" ;; *) ok ;; esac
 st rewind LT-000009 review 2>/dev/null; eq 2 $? "cannot rewind to review"
+# Rewinding to the current phase is a normal use (redo the Plan).
+st set LT-000009 Status plan:awaiting-approval >/dev/null
+st rewind LT-000009 plan >/dev/null && ok || ng "rewind to the current phase"
+# "## " inside a fence is not a section: the whole Approach moves.
+st set LT-000009 Status plan:in-progress >/dev/null
+awk '$0 == "## Approach" { print; print "fenced start"; print "```markdown"; print "## 背景"; print "fenced tail"; print "```"; print "after fence"; next } { print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
+h=$(st rewind LT-000009 approach --reason 'C:\temp\new')
+case "$(cat "$f9")" in *"fenced"*|*"after fence"*|*"## 背景"*) ng "a fenced ## line ends the section" ;; *) ok ;; esac
+has "after fence" "$(cat "$h")" "the whole fenced Approach is in the history"
+has 'C:\temp\new' "$(cat "$h")" "backslashes of the reason are kept (history)"
+has 'C:\temp\new' "$(cat "$f9")" "backslashes of the reason are kept (note)"
+# Two rewinds in the same second get two history files.
+h1=$(st rewind LT-000009 approach --reason one); h2=$(st rewind LT-000009 approach --reason two)
+[ "$h1" != "$h2" ] && [ -f "$h1" ] && [ -f "$h2" ] && ok || ng "same-second rewinds keep both history files ($h1, $h2)"
+has "Reason: one" "$(cat "$h1")" "the first history file is not overwritten"
 st set LT-000009 Status done >/dev/null
 st rewind LT-000009 plan 2>/dev/null; eq 4 $? "a done run is not rewound"
 rm -rf .tixforge/LT-000009
@@ -238,6 +255,15 @@ sed 's/exit 1"/exit 0"/' .tixforge/config.yml > "$tmp/c" && cat "$tmp/c" > .tixf
 git commit -q -am pass
 out=$(bash "$scripts/verify.sh"); eq 0 $? "all pass"
 eq "Verification @ $(git rev-parse --short HEAD): test pass, lint pass" "$out" "clean tree"
+# A command that rewrites a tracked file: the commit was not what the later
+# commands checked.
+printf 'language: ja\ncommands:\n  fmt: echo x >> wip-tracked.txt\n  test: "true"\n' > .tixforge/config.yml
+echo a > wip-tracked.txt && git add wip-tracked.txt .tixforge/config.yml && git commit -q -m tracked
+eq "" "$(git status --porcelain)" "the tree is clean before verifying"
+out=$(bash "$scripts/verify.sh"); eq 0 $? "a rewriting command still passes"
+has "Verification @ $(git rev-parse --short HEAD)+dirty: fmt pass, test pass" "$out" "+dirty when a command changed the tree"
+has " M wip-tracked.txt" "$out" "the changed file is listed"
+git reset -q --hard HEAD~1
 git stash pop -q
 printf 'language: ja\ncommands: {}\n' > "$tmp/empty.yml"
 cp .tixforge/config.yml "$tmp/keep.yml"; cp "$tmp/empty.yml" .tixforge/config.yml
@@ -473,6 +499,9 @@ eq "local: differs" "$(is check 46 .tixforge/GT-000046/ticket.md | sed -n 3p)" "
 is pull 46 .tixforge/GT-000046/ticket.md >/dev/null
 eq "local: same" "$(is check 46 .tixforge/GT-000046/ticket.md | sed -n 3p)" "check: after pull the copy is the synced version"
 eq "local: missing" "$(is check 46 "$tmp/none.md" | sed -n 3p)" "check: no copy"
+eq "assignees: " "$(is check 46 | tail -1)" "check: no assignee"
+jq '.assignees = [{"login":"me"},{"login":"someone"}]' "$GH_DIR/issue-46.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-46.json"
+eq "assignees: me,someone" "$(is check 46 | tail -1)" "check: assignees on the last line"
 
 # adopt: an issue written on GitHub (issue form), then written back keeping the original.
 printf '### 背景\n\nフォームから\n\n### 要件\n\n- 何か\n\n### 未決事項\n\n_No response_\n' > "$tmp/form"

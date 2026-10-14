@@ -4,7 +4,7 @@
 
 | workflow | 起動 | 内容 |
 |----------|------|------|
-| `tixforge-issue-sync.yml` | PR の作成・再オープン・ready for review・クローズ、issue のクローズ | PR 本文の `Closes #N` の issue（`tixforge:*` ラベル付きのものだけ）を `tixforge:in-review` に。マージされたら：default branch 向けなら閉じて `tixforge:done`、それ以外は `repository.close_issues` に従う（`release` なら `tixforge:merged` にして開いたまま、`merge` なら閉じて `done`）。`tixforge:merged` の issue が閉じられたら `tixforge:done` に |
+| `tixforge-issue-sync.yml` | PR の作成・再オープン・ready for review・本文の編集（開いている PR）・クローズ、issue のクローズ | PR 本文の `Closes #N` の issue（`tixforge:*` ラベル付きのものだけ）を `tixforge:in-review` に。マージされたら：default branch 向けなら閉じて `tixforge:done`、それ以外は `repository.close_issues` に従う（`release` なら `tixforge:merged` にして開いたまま、`merge` なら閉じて `done`）。`tixforge:merged` の issue が完了として閉じられたら `tixforge:done` に（not planned で閉じたときは変えない） |
 | `tixforge-pr-link.yml` | PR の作成・編集・push | `GT-<番号>-` ブランチの PR の本文に `Closes #<番号>` があるかを検査する。必須チェックにするかはユーザーがブランチ保護で決める（tixforge は設定しない） |
 | `tixforge-issue-guard.yml` | issue のタイトル・本文の編集 | 本文のハッシュが合わなければ（GitHub 上で直接編集された）`tixforge:out-of-sync` とコメントを付け、合えば外す |
 

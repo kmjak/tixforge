@@ -14,27 +14,29 @@ run を前のフェーズに戻す、ただ 1 つの手順。次のどれから�
 1. **準備**：チケット id を `bash <scripts>/ticket-id.sh normalize <引数>` で正規化する（無ければ尋ねる。SKILL.md の「現在の状態」の進行中の run を候補として示す）。`.tixforge/<ticket-id>/state.md` を読む。
    - 無ければ、戻す run が無いことを伝えて止まる（`/tixforge:dev <ticket-id>` で始められる）。
    - `Status` が `done`・`canceled` なら拒否する（完了・キャンセル済みの作業は戻さない）。
-   - `GT-` なら `references/github/labels.md` と `references/github/record.md` を Read する。
 2. **今の状態を示す**：`Status`、書かれているセクション、`Branch` にブランチがあればその commit（`git log --oneline <Base>..<Branch>`）と未コミットの変更の有無、`host: github` ならリモートブランチ（`git ls-remote --heads origin <Branch>`）と開いている PR（`gh pr list --head <Branch> --state open`）。
-3. **戻り先を選ぶ**：AskUserQuestion で、今のフェーズより前のフェーズから選んでもらう（単一選択。最大 4 つ）：**Research（最初から）**・**Approach**・**Plan**・**Implement**（今が Implement なら Implement は出さない）。戻したい理由を聞いていれば、それに合う戻り先に推奨を付ける（例：commit 分割を変えたい → Plan、方針から変えたい → Approach）。
+3. **戻り先を選ぶ**：AskUserQuestion で、今のフェーズより前のフェーズ（**Research（最初から）**・**Approach**・**Plan**・**Implement** のうち今より前のもの）と **戻さない** から選んでもらう（単一選択）。戻したい理由を聞いていれば、それに合う戻り先に推奨を付ける（例：commit 分割を変えたい → Plan、方針から変えたい → Approach）。
+   - 選択肢は最大 4 つなので、今が Review・PR のときは Research（最初から）を出さず、質問文に「最初からやり直すなら Research と入力」と添える。
+   - 戻り先が無い（今が Research）なら、`GT-` は「手放す」「戻さない」を尋ねる。`LT-` は戻すものが無いことを伝えて止まる。
+   - 「戻さない」なら、何もせずに止まる。
 4. **Research（最初から）を選んだとき**（`GT-` のときだけ）：続けて「自分で続ける」「このチケットを手放す（他の人に渡す）」を尋ねる。手放すなら下記「手放す」へ。
 5. **ブランチの扱い**（Plan 以前に戻り、ブランチに commit があるとき）：尋ねる：
    - **このブランチの上で続ける** — commit を残し、その上でやり直す。`## Implementation Log` は残す（既存の commit の記録なので）。
    - **新しいブランチで作り直す** — 次の Plan で別の名前のブランチを決める。古いブランチは「残す」か「削除する」かも尋ねる。削除するなら、マージされていない commit があるので `git branch -D` を使う（取り消せないことを伝える。guard hook の確認画面も出る）。今そのブランチにいれば、先に `Base` に切り替える（未コミットの変更があれば止まる。勝手に stash や破棄をしない）。リモートブランチがあれば削除するか（`git push origin --delete <Branch>`）、開いている PR があれば閉じるか（`gh pr close <PR>`）も同じ一覧で尋ねる。
-   - PR を出した後（`pr:*`）で「このブランチの上で続ける」なら、この後の commit は既存の PR に入ること、リポジトリの設定によっては Approve が外れることを伝える。
+   - PR を出した後（`pr:*`）から戻し、同じブランチで続ける（Implement に戻す・「このブランチの上で続ける」）なら、戻り先に関係なく、この後の commit は既存の PR に入ること、リポジトリの設定によっては Approve が外れることを伝える。
 6. **理由**を 1 行で尋ねる（Review の見直しから来たなら、その指摘の番号と要約でよい）。
 7. **行うことを一覧で示し、1 回の確認でまとめて承認をもらってから実行する**：
-   - `GT-` で、`## Approach` が書かれていて、Approach 以前に戻す（方針を捨てる）なら、`record.md` の判断の記録のコメントを投稿する（状態ファイルから方針が消える前に）。
+   - `GT-` で、`## Approach` が書かれていて、Approach 以前に戻す（方針を捨てる）なら、`references/github/record.md` を Read し、判断の記録のコメントを投稿する（状態ファイルから方針が消える前に）。
    - `bash <scripts>/run-state.sh rewind <ticket-id> <phase> --reason "<理由>"`（「このブランチの上で続ける」なら `--keep-log` を付ける）。出力された history のファイルを伝える。
-   - 「新しいブランチで作り直す」なら、`run-state.sh set <ticket-id> Branch —` でヘッダのブランチを外し、決めたブランチの片付けを行う。
+   - 「新しいブランチで作り直す」なら、`bash <scripts>/run-state.sh set <ticket-id> Branch —` でヘッダのブランチを外し、決めたブランチの片付けを行う。
 8. 戻したフェーズから、そのフェーズの手順（`run.md`）で続ける。前の内容は history にあるので、参考として読んでよい（ただし承認済みとは扱わず、ゲートは通り直す）。
 
 ## 手放す（`GT-` のチケットを他の人に渡す）
 
 1. 手順 2・5 と同じくブランチの扱いを尋ね、理由を 1 行で尋ねる。
-2. 行うことを一覧で示し、確認を得てから実行する：
+2. `references/github/labels.md` を Read する（`## Approach` が書かれていれば `references/github/record.md` も）。行うことを一覧で示し、確認を得てから実行する：
    - `## Approach` が書かれていれば、判断の記録のコメントを投稿する（見出しは「手放す」）。
-   - `issue-label.sh <番号> reset`（`tixforge:todo` に戻し、assignee から自分を外す）。
+   - `bash <scripts>/issue-label.sh <番号> reset`（`tixforge:todo` に戻し、assignee から自分を外す）。
    - ブランチの片付け（決めたもの）。
    - 手元の run（`.tixforge/<ticket-id>/state.md` と `history/`）を削除する。受け取った人は自分の手元で新しく始めるので、残すと古い状態が紛らわしい。チケットの作業用コピー（`ticket.md`）は残してよい。
 3. 行ったことを伝える。
@@ -47,6 +49,6 @@ run を前のフェーズに戻す、ただ 1 つの手順。次のどれから�
    - 例：受け入れ条件が変わった → Approach の方針、Plan の対応表と commit 分割を見直す必要がある。
    - 例：背景の言い回しだけが変わった → 影響なし。
    - PR を出した後（Approve 済みを含む）でも同じ。古い合意のまま承認された PR をマージしないために、ここで戻す判断をする。
-2. **戻すか選んでもらう**：AskUserQuestion で、影響に応じて推奨を付けた戻り先（今のフェーズより前の Research・Approach・Plan・Implement）と「戻さない」を出す。
-3. 戻すなら、上の「手順」の 5〜8 で戻す（理由は「チケットの変更：<変更点の要約>」）。
+2. **戻すか選んでもらう**：AskUserQuestion で、影響に応じて推奨を付けた戻り先（今のフェーズより前の Research・Approach・Plan・Implement）と「戻さない」を出す（選択肢の出し方は上の手順 3 と同じ）。
+3. 戻すなら、上の「手順」の 2・5・7 で戻す：手順 2 で今の状態を示し、手順 5 でブランチの扱いを決め、手順 7 で一覧を示して実行する。理由は尋ねずに「チケットの変更：<変更点の要約>」を使う。続けるかどうかは下の 4 で決める。
 4. 呼び出し元に戻る：edit から来た場合は、`/tixforge:dev <ticket-id>` で戻したフェーズから再開できることを案内する。dev から来た場合は、案内せずにそのフェーズから続ける。

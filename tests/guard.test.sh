@@ -213,6 +213,7 @@ state="implement:in-progress (allow list)"
 set_state implement:in-progress
 expect pass "$flow" 'git log --oneline main..HEAD'
 expect pass "$flow" 'git diff main...HEAD'
+expect pass "$flow" 'git merge-tree --write-tree main GT-000001-login'   # read-only conflict check (pr.md)
 expect pass "$flow" 'git add -A && git commit -m "feat: x"'
 expect pass "$flow" 'git switch main'
 expect pass "$flow" 'git checkout -b GT-000001-login-2'

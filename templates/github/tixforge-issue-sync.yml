@@ -1,21 +1,24 @@
-# tixforge template: tixforge-issue-sync (v2). Installed by /tixforge:project init.
+# tixforge template: tixforge-issue-sync (v3). Installed by /tixforge:project init.
 # Keeps the status label of tixforge issues in step with pull requests, so
 # the issue shows the real state even when nobody runs /tixforge:dev:
 #   PR opened / reopened / ready for review  -> tixforge:in-review
+#   open PR's body edited (Closes #N added)  -> tixforge:in-review
 #   PR merged into the default branch        -> tixforge:done, and closed
 #   PR merged into another branch (develop)  -> repository.close_issues in
 #       .tixforge/config.yml: "release" -> tixforge:merged, left open until
 #       the release closes it (Closes #N in the commit message);
 #       "merge" (default) -> tixforge:done, and closed
-#   issue closed while tixforge:merged       -> tixforge:done (released)
-# "Linked" means the PR body says Closes / Fixes / Resolves #N, and only
+#   issue closed as completed while tixforge:merged -> tixforge:done (released;
+#       closed as not planned is a cancel, which tixforge:canceled records)
+# "Linked" means the PR body says Closes / Fixes / Resolves #N (as a word of
+# its own: "hotfix #12" is not a link), and only
 # issues that carry a tixforge:* label are touched. Pull requests from forks
 # are not supported (their token is read-only; see the README).
 name: tixforge-issue-sync
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, closed]
+    types: [opened, reopened, ready_for_review, edited, closed]
   issues:
     types: [closed]
 
@@ -40,12 +43,14 @@ jobs:
           ACTION: ${{ github.event.action }}
           MERGED: ${{ github.event.pull_request.merged }}
           DRAFT: ${{ github.event.pull_request.draft }}
+          PR_STATE: ${{ github.event.pull_request.state }}
           BODY: ${{ github.event.pull_request.body }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           ISSUE: ${{ github.event.issue.number }}
           ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          ISSUE_REASON: ${{ github.event.issue.state_reason }}
         run: |
           STATUS="tixforge:todo tixforge:in-progress tixforge:in-review tixforge:merged tixforge:done tixforge:canceled"
           # set_status <n> <labels,> <want>: exactly one status label.
@@ -60,7 +65,9 @@ jobs:
 
           if [ "$EVENT" = issues ]; then
             # A release closed the issue (Closes #N in a commit reaching the
-            # default branch): merged -> done.
+            # default branch): merged -> done. Not when it was closed as not
+            # planned (a cancel): done would make it look completed.
+            [ "$ISSUE_REASON" = completed ] || exit 0
             case ",$ISSUE_LABELS," in
               *,tixforge:merged,*) set_status "$ISSUE" "$ISSUE_LABELS" tixforge:done ;;
             esac
@@ -74,8 +81,11 @@ jobs:
             }' .tixforge/config.yml 2>/dev/null)
           [ -n "$close_on" ] || close_on=merge
 
+          # An edit of a closed PR (merged or not) does not move its issues.
+          if [ "$ACTION" = edited ] && [ "$PR_STATE" != open ]; then exit 0; fi
+
           issues=$(printf '%s\n' "$BODY" \
-            | grep -Eio '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' \
+            | grep -Eio '(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' \
             | grep -Eo '[0-9]+' | sort -u)
           [ -n "$issues" ] || { echo "no linked issue"; exit 0; }
           for n in $issues; do

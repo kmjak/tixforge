@@ -3,7 +3,7 @@ name: dev
 description: tixforge の開発。1 つのチケットを 6 フェーズ Research → Approach → Plan → Implement → Review → PR で進める。進捗は .tixforge/<ticket-id>/state.md に集約するので、途中で止めても同じフェーズから再開できる。rewind で前のフェーズに戻す（最初から・チケットを手放すも）。/tixforge:dev で明示起動する。
 argument-hint: "[<ticket-id> | rewind <ticket-id>]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project-status.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/common-rules.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/github-preflight.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/ticket-id.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-state.sh *)
+allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project-status.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/common-rules.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/github-preflight.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/ticket-id.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-state.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/verify.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/review-input.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/pr-status.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/issue-sync.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/issue-label.sh *)
 ---
 
 # /tixforge:dev — チケットの開発
@@ -44,7 +44,7 @@ allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project
 
 | 参照ファイル | 読むとき |
 |--------------|----------|
-| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ（`GT-` のチケットを扱うとき。`fetch`・`create`・`sync`・`labels`・`record`・`pr`） |
+| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ（`GT-` のチケットを扱うとき） |
 | `${CLAUDE_SKILL_DIR}/pr.md` | PR フェーズに入るとき・`pr:*` から再開するとき（`run.md` が指示する） |
 
 以下の共通規約は、このスキルのすべてに適用する。

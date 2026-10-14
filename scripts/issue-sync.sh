@@ -22,7 +22,7 @@
 #   local       same | differs | missing: the ticket file (when given) against
 #               the version tixforge last wrote to the issue. Only "same" means
 #               the file may overwrite a direct edit on GitHub.
-#   title, state, state_reason, labels
+#   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
 # pull records the hash it saw in <dir>/.issue-hash; push refuses (exit 5)
 # when the issue's hash has changed since, i.e. someone else pushed an edit
@@ -62,17 +62,18 @@ make_body() {
 tmpd=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmpd"' EXIT
 
-# load <number>: fills $tmpd/body and title, state, reason, labels.
+# load <number>: fills $tmpd/body and title, state, reason, labels, assignees.
 load() {
   local info
   # One value per line: a tab-separated read would collapse empty fields.
-  info=$(gh issue view "$1" --json title,state,stateReason,labels \
-    --jq '.title, .state, (.stateReason // ""), ([.labels[].name] | join(","))') || exit $?
+  info=$(gh issue view "$1" --json title,state,stateReason,labels,assignees \
+    --jq '.title, .state, (.stateReason // ""), ([.labels[].name] | join(",")), ([.assignees[].login] | join(","))') || exit $?
   gh issue view "$1" --json body --jq .body > "$tmpd/body" || exit $?
   title=$(printf '%s\n' "$info" | sed -n 1p)
   state=$(printf '%s\n' "$info" | sed -n 2p)
   reason=$(printf '%s\n' "$info" | sed -n 3p)
   labels=$(printf '%s\n' "$info" | sed -n 4p)
+  assignees=$(printf '%s\n' "$info" | sed -n 5p)
 }
 
 # verdict: of the loaded issue.
@@ -169,6 +170,7 @@ case $cmd in
     echo "state: $state"
     echo "state_reason: $reason"
     echo "labels: $labels"
+    echo "assignees: $assignees"
     ;;
 
   pull)

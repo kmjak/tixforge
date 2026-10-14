@@ -124,6 +124,28 @@ cfg_list() {
   ' "$file"
 }
 
+# The sections of state.md, in phase order. A section starts only at one of
+# these six headings, and not inside a ``` / ~~~ fence: an Approach may quote
+# Markdown that has "## " lines of its own. _section_awk defines
+# heading_index(line) for awk programs: 1..6 for a section heading, else 0.
+# Call it on every line, in order (it tracks the fences).
+STATE_SECTIONS="Research|Approach|Plan|Implementation Log|Review|PR"
+_section_awk='
+function heading_index(line,   m, name, i, n, s) {
+  if (!_sec_n) { _sec_n = split("'"$STATE_SECTIONS"'", s, "|"); for (i = 1; i <= _sec_n; i++) _sec_idx[s[i]] = i }
+  sub(/\r$/, "", line)
+  if (match(line, /^ ? ? ?(```+|~~~+)/)) {
+    m = substr(line, RSTART, RLENGTH); sub(/^ +/, "", m)
+    if (_fence == "") _fence = m
+    else if (substr(m, 1, 1) == substr(_fence, 1, 1) && length(m) >= length(_fence) && substr(line, RSTART + RLENGTH) ~ /^[ \t]*$/) _fence = ""
+    return 0
+  }
+  if (_fence != "" || line !~ /^## /) return 0
+  name = substr(line, 4); sub(/[ \t]+$/, "", name)
+  return (name in _sec_idx) ? _sec_idx[name] : 0
+}
+'
+
 # field <state.md> <name>: value from the state file's header table.
 field() {
   awk -F'|' -v k="$2" '{ key=$2; gsub(/^[ \t]+|[ \t]+$/, "", key) }
