@@ -1,8 +1,10 @@
-# tixforge template: tixforge-issue-sync (v3). Installed by /tixforge:project init.
+# tixforge template: tixforge-issue-sync (v4). Installed by /tixforge:project init.
 # Keeps the status label of tixforge issues in step with pull requests, so
 # the issue shows the real state even when nobody runs /tixforge:dev:
 #   PR opened / reopened / ready for review  -> tixforge:in-review
 #   open PR's body edited (Closes #N added)  -> tixforge:in-review
+#       (not an issue already tixforge:merged: a release PR from develop
+#       links it again, and it is still waiting for the release)
 #   PR merged into the default branch        -> tixforge:done, and closed
 #   PR merged into another branch (develop)  -> repository.close_issues in
 #       .tixforge/config.yml: "release" -> tixforge:merged, left open until
@@ -104,6 +106,8 @@ jobs:
                 gh issue close "$n" --comment "Closed by tixforge-issue-sync: $PR_URL merged"
               fi
             elif [ "$DRAFT" != true ] && [ "$state" = OPEN ]; then
+              # Merged into the base, waiting for the release: keep it.
+              case ",$labels," in *,tixforge:merged,*) continue ;; esac
               set_status "$n" "$labels" tixforge:in-review
             fi
           done
