@@ -25,11 +25,11 @@
 
 | 用途 | コマンド |
 |------|----------|
-| 引数からチケット id を取り出す | `ticket-id.sh detect "<引数>"` → `id: <id>`（無ければ `id: none`、形が不正なら `invalid: <語>`）と `rest: <id を除いた残り>`。明示的な形（`LT-…`・`GT-…`・`#123`）は文中でも拾い、裸の数字は引数全体が数字のときだけ拾う |
-| 指定された id の正規化 | `ticket-id.sh normalize <引数>`（`LT-000123`・`GT-000123`（大文字小文字は問わない）・`#123`（issue 番号）・`123`（`ticket.tracker` に従う）。桁数が違う id は 0 埋めせずにエラー（終了コード 2）→ 正しい形を示して尋ねる） |
-| そのチケットが実在するか | `ticket-id.sh exists <id>` → `ticket`（`LT-`）・`issue`・`pull-request`（その番号は PR）・`none` |
-| id → issue 番号 | `ticket-id.sh number <GT-id>` |
-| 次の id（`LT-`） | `ticket-id.sh next` |
+| 引数からチケット id を取り出す | `bash <scripts>/ticket-id.sh detect "<引数>"` → `id: <id>`（無ければ `id: none`、形が不正なら `invalid: <語>`）と `rest: <id を除いた残り>`。明示的な形（`LT-…`・`GT-…`・`#123`）は文中でも拾い、裸の数字は引数全体が数字のときだけ拾う |
+| 指定された id の正規化 | `bash <scripts>/ticket-id.sh normalize <引数>`（`LT-000123`・`GT-000123`（大文字小文字は問わない）・`#123`（issue 番号）・`123`（`ticket.tracker` に従う）。桁数が違う id は 0 埋めせずにエラー（終了コード 2）→ 正しい形を示して尋ねる） |
+| そのチケットが実在するか | `bash <scripts>/ticket-id.sh exists <id>` → `ticket`（`LT-`）・`issue`・`pull-request`（その番号は PR）・`none` |
+| id → issue 番号 | `bash <scripts>/ticket-id.sh number <GT-id>` |
+| 次の id（`LT-`） | `bash <scripts>/ticket-id.sh next` |
 
 - **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。
 - 取り違えを防ぐため、dev・edit・cancel は始めるときに「`<id>`：<チケットのタイトル>」を必ずユーザーに示す。

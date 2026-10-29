@@ -1,4 +1,4 @@
-# tixforge template: tixforge-issue-guard (v2). Installed by /tixforge:project init
+# tixforge template: tixforge-issue-guard (v3). Installed by /tixforge:project init
 # together with .github/tixforge/ticket-hash.sh and messages.yml (copies of the
 # plugin's files, so the hash is computed exactly as tixforge computes it and
 # the comment is in the document language of .tixforge/config.yml).
@@ -10,6 +10,9 @@
 # the issue gets the label tixforge:out-of-sync and one comment. /tixforge:dev and
 # /tixforge:ticket edit see the label, show the difference and ask whether to adopt it.
 # When tixforge syncs again the hash matches and the label is removed.
+# Markers that are gone count only when the body had them before this edit:
+# an issue from the issue form, not yet adopted by /tixforge:ticket create,
+# never had them.
 name: tixforge-issue-guard
 
 on:
@@ -38,6 +41,8 @@ jobs:
           NUMBER: ${{ github.event.issue.number }}
           TITLE: ${{ github.event.issue.title }}
           BODY: ${{ github.event.issue.body }}
+          # The body before this edit; a title-only edit has no changes.body.
+          PREV: ${{ github.event.changes.body && github.event.changes.body.from || github.event.issue.body }}
           LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
           h=.github/tixforge/ticket-hash.sh
@@ -50,7 +55,10 @@ jobs:
               ok=1   # an issue made before hashes: nothing to compare
             fi
           else
-            ok=0     # the markers are gone
+            # The markers are gone: report it only when the body had them.
+            printf '%s' "$PREV" > "$RUNNER_TEMP/prev.md"
+            bash "$h" extract < "$RUNNER_TEMP/prev.md" > /dev/null || exit 0
+            ok=0
           fi
           # msg <key>: a line of messages.yml in the document language (en fallback).
           msg() {
@@ -60,8 +68,9 @@ jobs:
                 /^[^ \t#]/ { cur = $0; sub(/:.*/, "", cur); next }
                 cur == l && $0 ~ "^[ \t]+" k ":" { v = $0; sub(/^[^:]*:[ \t]*/, "", v); sub(/^"/, "", v); sub(/"[ \t\r]*$/, "", v); print v; exit }
               ' .github/tixforge/messages.yml 2>/dev/null)
-              [ -n "$v" ] && { printf '%b\n' "$v"; return; }
+              [ -n "$v" ] && { printf '%b\n' "$v"; return 0; }
             done
+            return 0   # run is bash -e: a missing message must not end the script
           }
           case ",$LABELS," in *,tixforge:out-of-sync,*) labeled=1 ;; *) labeled=0 ;; esac
           if [ $ok -eq 1 ]; then
@@ -69,5 +78,7 @@ jobs:
             exit 0
           fi
           [ $labeled -eq 1 ] && exit 0   # already reported
+          text=$(msg out_of_sync_comment)
+          [ -n "$text" ] || text="このチケットの本文またはタイトルが GitHub 上で直接編集されました（tixforge:out-of-sync）。次に /tixforge:dev か /tixforge:ticket edit を実行したときに差分を確認し、取り込むかを選べます。今後の変更は /tixforge:ticket edit で行ってください。"
           gh issue edit "$NUMBER" --add-label tixforge:out-of-sync
-          gh issue comment "$NUMBER" --body "$(msg out_of_sync_comment)"
+          gh issue comment "$NUMBER" --body "$text"

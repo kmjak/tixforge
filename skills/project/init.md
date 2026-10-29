@@ -6,9 +6,9 @@
 
 1. **現状の確認**：`docs/context/`・`.tixforge/` の有無と中身、git リポジトリかどうか、commit が 1 つでもあるか（`git rev-parse --verify -q HEAD`）、remote（`git remote -v`）。
    `.tixforge/config.yml` が既にある場合（再実行）は読み込み、**値があるキーは尋ねずにそのまま使う**。以降の手順は、値が無いキーについてだけ行う。
-2. **開発の人数**：「1 人で開発しますか？」と尋ねる（設定のキーが全て埋まっていれば尋ねない）。答えは「チケット管理」「ブランチ運用」「レビューの要否」の推奨に使い回す（同じことを 2 度尋ねない）。
+2. **開発の人数**：「1 人で開発しますか？」と尋ねる（答えを使うキー `ticket.tracker`・`repository.base_branch`・`review.required` が全てあれば尋ねない）。答えは「チケット管理」「ブランチ運用」「レビューの要否」の推奨に使い回す（同じことを 2 度尋ねない）。
 3. **リポジトリ**（`repository.host`）：tixforge はブランチと commit を前提にし、PR は GitHub に出す。
-   - **git リポジトリでない**：`git init` するか尋ねる（ブランチ名は「ブランチ運用」で決める）。しないなら、tixforge は使えないことを伝えて中止する。
+   - **git リポジトリでない**：`git init` するか尋ねる。するなら `git init -b main` で作る（ブランチ名は「ブランチ運用」で決め、違えばそこで合わせる）。しないなら、tixforge は使えないことを伝えて中止する。
    - **remote がある**：`bash <scripts>/github-preflight.sh` を実行する。
      - `ok: <owner>/<repo>` → `host: github`（SSH の Host エイリアスや GitHub Enterprise でも、gh が知っていれば GitHub と判定できる）。
      - 終了コード 3・4（gh が無い・未ログイン）→ `git remote get-url origin` が `github.com` を含めば GitHub の可能性が高い。出力の案内（インストール、`! gh auth login`）を示し、済ませてもらってから確かめ直す。
@@ -31,6 +31,7 @@
    - **新しく作るリポジトリ**（`git init` した・「リポジトリを作る場合」・commit がまだ 1 つも無い）：運用を尋ねる。ブランチ名は自由入力で変えられる。
      - **main だけ**（1 人なら推奨）— `base_branch: main`。
      - **main + develop**（develop で開発し、main はリリース用）— `base_branch: develop`。develop は「commit」の後に作る（init のファイルを両方に含めるため）。GitHub の default branch は main のままにする。
+     - **ブランチ名を合わせる**：commit がまだ無く、今のブランチ名（`git symbolic-ref --short HEAD`）が合わせる名前（main だけなら `base_branch`、main + develop なら main 側の名前）と違えば、「今のブランチは `<今の名前>`、`base_branch` は `<名前>`。`git branch -m <名前>` で名前を変えますか」と尋ねてから行う。変えないと、commit は今のブランチに入り、`base_branch` のブランチが存在しないまま残る。
    - **既存のリポジトリ**：GitHub の default branch（`gh repo view --json defaultBranchRef`、取れなければ `git symbolic-ref --short refs/remotes/origin/HEAD`、`host: none` なら今のブランチ）を既定にする。ローカル（`git show-ref`）とリモート（`git ls-remote --heads origin`）に `develop`・`dev`・`development` があり、default と違えば、どちらを `base_branch` にするか尋ねる。見つからなければ尋ねない。
    - **issue を閉じる時点**（`host: github` で、`base_branch` が GitHub の default branch と違うときだけ尋ねる）：
      - **リリースで閉じる**（`close_issues: release`）— develop へのマージでは閉じず、main に入ったとき（commit メッセージの `Closes #N` により GitHub が閉じる）。間は `tixforge:merged`。このときは squash の設定を確かめる：`gh api repos/{owner}/{repo} --jq '.squash_merge_commit_title + " " + .squash_merge_commit_message'` が `PR_TITLE BLANK`（squash の commit メッセージが PR タイトルだけ）なら、squash マージで `Closes` が消えて issue が閉じなくなることを伝え、設定を変えるか「マージで閉じる」にするか尋ねる。
@@ -42,7 +43,7 @@
        base_branch: develop  # dev がブランチを切る元・PR の向き先
        close_issues: release # base_branch が default branch と違うときだけ：release | merge
      ```
-5. **ドキュメント言語**（`language`）：「日本語（推奨・既定）」「English」を選択肢にして尋ねる（その他は自由入力）。以降のチケットと `docs/context/**` はこの言語で書き、この後の会話（質問・説明）もこの言語で行う。ここまでの会話は日本語で行う。
+5. **ドキュメント言語**（`language`）：「日本語（推奨・既定）」「English」を選択肢にして尋ねる（その他は自由入力）。以降のチケットと `docs/context/**` はこの言語で書き、この後の会話（質問・説明）もこの言語で行う。
 6. **検証コマンド**（`commands`）：dev の Implement・Review で Claude が実行する、テスト・lint・型チェックなどのコマンド。
    - 先にプロジェクトから候補を読み取る（`package.json` の scripts、`Makefile`、`justfile`、`Taskfile.yml`、`pyproject.toml`、`Cargo.toml`、`go.mod`、CI 設定（`.github/workflows/*`）など）。CI で実行しているコマンドがあれば優先して候補にする。
    - 候補を出典のファイル付きで示し、どれを使うかをユーザーに確定してもらう。**確認なしに推測のコマンドを書かない。**
@@ -72,12 +73,12 @@
    - **ローカルのみ**（`tracker: local`）— id はローカルの連番（`LT-`）。チケットは `.tixforge/<id>/ticket.md` に置き、git で管理しない。作成者の手元にしか無く、他の人と共有できない（1 人・1 台で使う前提）。GitHub に PR を出す場合、受け入れ条件は PR 本文に転記される。public リポジトリで「コードは公開、計画は手元」にしたいときにも使える。
 
    `host: github` なら（`tracker` に関係なく、再実行のたびに）次を行う：
-   - **事前チェック**：`bash <scripts>/github-preflight.sh`。`ok:` 以外なら出力を示し、済ませてもらってから確かめ直す。どうしても済ませられなければ、`host: none` にするか尋ねる。
+   - **事前チェック**：`bash <scripts>/github-preflight.sh`（同じ実行の中で「リポジトリ」の手順で既に `ok:` だったなら繰り返さない）。`ok:` 以外なら出力を示し、済ませてもらってから確かめ直す。どうしても済ませられなければ、`host: none` にするか尋ねる。
 
    `tracker: github` なら、さらに：
    - **ラベルを作る**：`references/github/labels.md` を Read し、tixforge のラベルのうち無いものを意味と一緒に示して確認を得てから、`bash <scripts>/issue-label.sh setup` で作る。
    - **issue フォーム**（任意）：tixforge を使わない人（PM など）も GitHub の画面から issue を作るなら、チケットと同じ見出しの issue フォームを入れるか尋ねる。入れるなら `<plugin>/templates/github/ISSUE_TEMPLATE/tixforge-ticket.yml` を `.github/ISSUE_TEMPLATE/` にコピーする（ドキュメント言語が日本語以外なら、ラベル・見出し・説明をその言語に訳す。見出しはチケットの見出しと同じにする）。フォームで作られた issue は `/tixforge:ticket create #<番号>` で取り込める。
-9. **レビューの要否**（`review.required`。`host: none` なら PR が無いので書かない）：「開発の人数」の答えから決める（尋ね直さない）。
+9. **レビューの要否**（`review.required`。`host: none` では PR が無いので使われないが、全てのキーを揃えるために書く）：「開発の人数」の答えから決める（尋ね直さない）。
    - **1 人** — `required: false`。GitHub では自分の PR を Approve できないため、`true` のままだと PR が完了にならない。CI 成功・コンフリクトなしで dev はマージ待ちにし、マージはユーザーが行う。
    - **複数人** — `required: true`（Approve 済み・CI 成功・コンフリクトなしでマージ待ち）。
    - 人数が変わったら `/tixforge:project update` で変えられることを伝える。
@@ -143,8 +144,9 @@
 17. **まとめ**：作ったものを要約する。対話で作った場合は未決事項を示す。自分で作る場合は、`docs/context/overview.md` を埋めてから `/tixforge:ticket create` に進むよう促す。
 18. **commit**：init で作ったもの・変えたもの（`.tixforge/.gitignore`・`.tixforge/config.yml`・`docs/context/**`・`LICENSE`・`CLAUDE.md`・PR テンプレート・`.github/ISSUE_TEMPLATE/tixforge-ticket.yml`・`.github/workflows/tixforge-*.yml`・`.github/tixforge/*`）をまとめて commit する。対象ファイルと commit メッセージ（`docs/context/commit.md` の規約に従う）を提示し、確認を得てから commit する。init が作ったもの以外の変更は含めない。
     - **commit が 1 つも無いリポジトリ**では、必ずこの時点で commit する（後回しにする選択肢を出さない）。commit が無いと、dev が `base_branch` からブランチを切れないため。context が雛形のままでもよい。
-    - **既存のリポジトリで remote がある**なら、「ブランチを切って PR にする（ブランチ保護や PR 必須の運用向け）」「`base_branch` に直接 commit する」を尋ねる。PR にするなら、ブランチを切って commit し、push と PR 作成はコマンドを示して確認を得てから行う。
+    - **既存のリポジトリで `host: github`** なら、「ブランチを切って PR にする（ブランチ保護や PR 必須の運用向け）」「`base_branch` に直接 commit する」を尋ねる。PR にするなら、Base がリモートに無ければ（`git ls-remote --heads origin <base_branch>`）先に Base を push し（コマンドを示して確認を得る）、それからブランチを切って commit し、push と PR 作成はコマンドを示して確認を得てから行う。`host: none` では尋ねずに `base_branch` に commit する（tixforge は push しない）。
     - 新しく作ったリポジトリで context を自分で書く場合も、上のとおり今 commit する（書き終えた後の変更は、ユーザーが別に commit する）。
     - **main + develop を選んだ場合**：commit の後に `git branch develop`（init のファイルを両方に含めるため）。
-    - 「リポジトリを作る場合」で「push する」を選んだ場合だけ、commit の後に push する（main + develop なら `git push -u origin main develop`、それ以外は `git push -u origin <base_branch>`。実行前にコマンドを示して確認を得る）。それ以外では push しない。
+    - 「リポジトリを作る場合」で「push する」を選んだ場合は、commit の後に push する（main + develop なら `git push -u origin main develop`、それ以外は `git push -u origin <base_branch>`。実行前にコマンドを示して確認を得る）。「push しない」を選んだ場合は push しない。
+    - それ以外で `host: github` なら、commit（と develop の作成）の後に、`git ls-remote --heads origin` でリモートに `base_branch`（main + develop なら main も）があるか確かめる。無いものがあれば、push するか尋ねる（`git push -u origin <無いブランチ…>` を示して確認を得てから行う）。無いままだと、dev の Plan（Base がリモートにあるかの確認）と Implement（`git fetch origin <Base>`）で止まる。
 20. 次の一手として `/tixforge:ticket create` を案内する。

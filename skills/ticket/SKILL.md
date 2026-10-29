@@ -3,7 +3,7 @@ name: ticket
 description: tixforge のチケット操作。create（チケットを対話で作る。GitHub 連携時は issue を作り、issue 番号から id を決める）、edit（チケットを編集し、進行中の run はフェーズを戻す）、cancel（チケットをキャンセル済みにする）。/tixforge:ticket で明示起動する。
 argument-hint: "[create [作りたいもの] | edit <ticket-id> | cancel <ticket-id> | 作りたいもの]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project-status.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/common-rules.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/github-preflight.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/ticket-id.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-state.sh *)
+allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project-status.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/common-rules.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/github-preflight.sh), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/ticket-id.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-state.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/issue-sync.sh *), Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/issue-label.sh *)
 ---
 
 # /tixforge:ticket — チケット
@@ -41,7 +41,7 @@ AskUserQuestion で、create・edit・cancel から 1 つを選んでもらう�
 
 | 参照ファイル | 読むとき |
 |--------------|----------|
-| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ（`GT-` のチケットを扱うとき。`fetch`・`create`・`sync`・`labels`・`record`・`pr`） |
+| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ（`GT-` のチケットを扱うとき） |
 | `${CLAUDE_PLUGIN_ROOT}/skills/dev/rewind.md` | チケットが変わり、進行中の run のフェーズを戻すか決めるとき（edit が指示する。「チケットが変わったとき」の節） |
 
 以下の共通規約は、このスキルのすべてに適用する。
