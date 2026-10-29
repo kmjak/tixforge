@@ -146,7 +146,6 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 
 - `permissionDecision: "ask"` は、`permissions.allow` に `git push` を入れていても、auto モードでも確認画面を出す。
 - 検知はあえて広めにしている（引用符を外して `git` と `push` の組み合わせを拾うなど）。誤検知しても確認画面が出るだけ。commit メッセージに「push -f」と書いただけならブロックしない（確認画面に注記が付く）。
-- `jq` が無いと詳しく判定できないので、run のブランチでは push らしいコマンドに確認画面を出す（許可リスト・MCP・編集の判定は行わない）。
 - **事故防止の仕組みであって、完全な防御ではない。** Claude が実行できるコマンドは、どんな検知もすり抜ける書き方ができる。サーバー側で確実に守りたいことは、Actions（`tixforge-pr-link`）とブランチ保護で守る。
 
 ## 困ったとき
@@ -160,12 +159,12 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 ```sh
 claude --plugin-dir .                     # 作業ツリーをそのまま読み込む
 claude plugin validate .                  # manifest の確認
-bash tests/guard.test.sh && bash tests/scripts.test.sh
-/bin/bash tests/guard.test.sh && /bin/bash tests/scripts.test.sh   # macOS の bash 3.2
+bash tests/guard.test.sh && bash tests/json-get.test.sh && bash tests/scripts.test.sh
+/bin/bash tests/guard.test.sh && /bin/bash tests/json-get.test.sh && /bin/bash tests/scripts.test.sh   # macOS の bash 3.2
 ```
 
 - `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
-- 結果が 1 つに決まる処理は `scripts/` に置き、テストで確かめる（gh はスタブに置き換える。`scripts.test.sh` には jq が要る）。
+- 結果が 1 つに決まる処理は `scripts/` に置き、テストで確かめる（gh はスタブに置き換える。`scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、guard が hook の入力を読む `json_get` を jq の結果とも突き合わせる）。
 - スクリプトの中で、`$var` の直後に全角文字を続けない（`${var}` と書く）。テストが検出する。
 - **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。上げた commit が `main` に入ると、Discord に前の版からマージされた PR の一覧が通知される（`.github/workflows/discord-merge-notify.yml`）。`claude plugin tag` で `tixforge--v<version>` のタグを作ってもよい。
 

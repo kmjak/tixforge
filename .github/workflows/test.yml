@@ -21,3 +21,4 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash tests/guard.test.sh
       - run: bash tests/scripts.test.sh
+      - run: bash tests/json-get.test.sh

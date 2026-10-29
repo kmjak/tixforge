@@ -130,6 +130,96 @@ field() {
     key == k { v=$3; gsub(/^[ \t]+|[ \t]+$/, "", v); print v; exit }' "$1"
 }
 
+# json_get <path>: the string at a key path ("cwd", "tool_input.command") of
+# the JSON object on stdin, with its escapes decoded; nothing when absent or
+# not a string. Enough for hook input, so the guard needs no jq.
+# - awk runs in the C locale: strings compare byte by byte (a UTF-8 locale may
+#   collate "cwd" equal to "cwdあ") and %c writes one byte of UTF-8.
+# - It only splits at one-character separators, a single linear pass in every
+#   awk; regex gsub / split take quadratic time in BWK awk, and a command can
+#   be a long heredoc. BWK awk also splits a one-character separator at every
+#   newline, so the input is joined into one line first (raw newlines are
+#   only between tokens).
+json_get() {
+  LC_ALL=C awk -v want="$1" '
+    function is_hex4(h) { return h ~ /^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$/ }
+    function hex(h,   n, k) {
+      h = tolower(h); n = 0
+      for (k = 1; k <= 4; k++) n = n * 16 + index("0123456789abcdef", substr(h, k, 1)) - 1
+      return n
+    }
+    function utf8(n) {
+      if (n < 128) return n ? sprintf("%c", n) : ""
+      if (n < 2048) return sprintf("%c%c", 192 + int(n / 64), 128 + n % 64)
+      if (n < 65536) return sprintf("%c%c%c", 224 + int(n / 4096), 128 + int(n / 64) % 64, 128 + n % 64)
+      return sprintf("%c%c%c%c", 240 + int(n / 262144), 128 + int(n / 4096) % 64, 128 + int(n / 64) % 64, 128 + n % 64)
+    }
+    # odd_tail <s>: 1 when s ends in an odd number of backslashes, that is,
+    # the quote after it is escaped.
+    function odd_tail(s,   l, n) {
+      l = length(s); n = 0
+      while (n < l && substr(s, l - n, 1) == "\\") n++
+      return n % 2
+    }
+    # unescape <s>: prints s decoded. After a split at "\", every piece but
+    # the first starts with an escape letter, except the one after "\\".
+    function unescape(s,   e, m, k, c, h, lo, lit) {
+      m = split(s, e, "\\"); printf "%s", e[1]; lit = 0
+      for (k = 2; k <= m; k++) {
+        if (lit) { printf "%s", e[k]; lit = 0; continue }
+        if (e[k] == "") { printf "\\"; lit = 1; continue }
+        c = substr(e[k], 1, 1)
+        if (c == "u") {
+          h = substr(e[k], 2, 4)
+          if (!is_hex4(h)) { printf "?%s", substr(e[k], 2); continue }
+          h = hex(h)
+          # A surrogate pair is two \u in a row: high D800-DBFF, low DC00-DFFF.
+          if (h >= 55296 && h < 56320 && length(e[k]) == 5 && k < m && substr(e[k + 1], 1, 1) == "u" && is_hex4(substr(e[k + 1], 2, 4))) {
+            lo = hex(substr(e[k + 1], 2, 4))
+            if (lo >= 56320 && lo < 57344) {
+              k++; printf "%s%s", utf8(65536 + (h - 55296) * 1024 + lo - 56320), substr(e[k], 6)
+              continue
+            }
+          }
+          printf "%s%s", (h >= 55296 && h < 57344 ? "?" : utf8(h)), substr(e[k], 6)
+          continue
+        }
+        if (c == "n") c = "\n"; else if (c == "t") c = "\t"; else if (c == "r") c = "\r"
+        else if (c == "b") c = "\b"; else if (c == "f") c = "\f"
+        printf "%s%s", c, substr(e[k], 2)
+      }
+    }
+    { buf = buf $0 " " }
+    END {
+      # Split at ": the pieces alternate between the text between strings and
+      # a string, which goes on over pieces that end at an escaped quote. In
+      # the text, { and [ open a level named by the key before it; a string
+      # followed by ":" is a key.
+      n = split(buf, q, "\""); depth = 0; key = ""; i = 1
+      while (1) {
+        for (k = 1; k <= length(q[i]); k++) {
+          c = substr(q[i], k, 1)
+          if (c == "{" || c == "[") { name[++depth] = key; key = "" }
+          else if (c == "}" || c == "]") { depth--; key = "" }
+        }
+        if (++i > n) break
+        for (j = i; j < n && odd_tail(q[j]); j++) ;
+        if (q[j + 1] ~ /^[ \t\r]*:/) key = (j == i ? q[i] : "")
+        else {
+          path = ""
+          for (k = 2; k <= depth; k++) path = path name[k] "."
+          if (path key == want) {
+            for (k = i; k < j; k++) { unescape(substr(q[k], 1, length(q[k]) - 1)); printf "\"" }
+            unescape(q[j]); exit
+          }
+          key = ""
+        }
+        if ((i = j + 1) > n) break
+      }
+    }
+  '
+}
+
 flow_now() { date '+%Y-%m-%d %H:%M'; }
 
 # is_open_status <status>: a run that is neither done nor canceled.

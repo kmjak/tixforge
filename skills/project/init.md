@@ -140,9 +140,8 @@
 16. **CI**（`host: github` で `commands` が `{}` でないときだけ）：`.github/workflows/` に、検証コマンドを実行している workflow が無ければ、作るか尋ねる。CI と dev の検証を同じ内容に揃えるため。
     - 作るなら `<plugin>/templates/github/tixforge-ci.yml` を下敷きにして、ユーザーと一緒に埋める：`__BRANCHES__` は `base_branch`（GitHub の default branch と違えば両方。main + develop なら `main, develop`）、`__COMMANDS__` は `commands` を書いた順に 1 ステップずつ、`__SETUP__`（言語のセットアップ・依存のインストール）はプロジェクトのファイル（`package.json` のロックファイル・`.nvmrc`・`pyproject.toml`・`go.mod` など）から候補を作って確認する。**確認していないセットアップ手順を推測で書かない。**
     - 全文を示し、確認を得てから `.github/workflows/tixforge-ci.yml` に書く。
-17. **jq**：`command -v jq` で jq があるか確かめる。無ければインストール（例：`brew install jq`）を案内する。guard hook は jq が無いと、run のブランチで push・PR 作成かどうかを詳しく判定できず（push らしいコマンドのたびに確認画面が出る）、許可リスト・MCP・編集の判定を行わない。
-18. **まとめ**：作ったものを要約する。対話で作った場合は未決事項を示す。自分で作る場合は、`docs/context/overview.md` を埋めてから `/tixforge:ticket create` に進むよう促す。
-19. **commit**：init で作ったもの・変えたもの（`.tixforge/.gitignore`・`.tixforge/config.yml`・`docs/context/**`・`LICENSE`・`CLAUDE.md`・PR テンプレート・`.github/ISSUE_TEMPLATE/tixforge-ticket.yml`・`.github/workflows/tixforge-*.yml`・`.github/tixforge/*`）をまとめて commit する。対象ファイルと commit メッセージ（`docs/context/commit.md` の規約に従う）を提示し、確認を得てから commit する。init が作ったもの以外の変更は含めない。
+17. **まとめ**：作ったものを要約する。対話で作った場合は未決事項を示す。自分で作る場合は、`docs/context/overview.md` を埋めてから `/tixforge:ticket create` に進むよう促す。
+18. **commit**：init で作ったもの・変えたもの（`.tixforge/.gitignore`・`.tixforge/config.yml`・`docs/context/**`・`LICENSE`・`CLAUDE.md`・PR テンプレート・`.github/ISSUE_TEMPLATE/tixforge-ticket.yml`・`.github/workflows/tixforge-*.yml`・`.github/tixforge/*`）をまとめて commit する。対象ファイルと commit メッセージ（`docs/context/commit.md` の規約に従う）を提示し、確認を得てから commit する。init が作ったもの以外の変更は含めない。
     - **commit が 1 つも無いリポジトリ**では、必ずこの時点で commit する（後回しにする選択肢を出さない）。commit が無いと、dev が `base_branch` からブランチを切れないため。context が雛形のままでもよい。
     - **既存のリポジトリで remote がある**なら、「ブランチを切って PR にする（ブランチ保護や PR 必須の運用向け）」「`base_branch` に直接 commit する」を尋ねる。PR にするなら、ブランチを切って commit し、push と PR 作成はコマンドを示して確認を得てから行う。
     - 新しく作ったリポジトリで context を自分で書く場合も、上のとおり今 commit する（書き終えた後の変更は、ユーザーが別に commit する）。
