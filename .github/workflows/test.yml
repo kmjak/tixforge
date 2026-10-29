@@ -1,7 +1,10 @@
 name: test
 
+# push only on main: a PR's branch is tested by pull_request, so it does not
+# run twice.
 on:
   push:
+    branches: [main]
     paths:
       - "scripts/**"
       - "templates/**"
@@ -17,7 +20,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # One job per suite and awk, in parallel; a failing job does not stop the
+    # others. The scripts run in the user's awk: gawk, or mawk (the default
+    # awk of Debian / Ubuntu). macOS awk is checked by running the tests on a
+    # Mac.
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [guard, scripts, json-get]
+        awk: [gawk, mawk]
     steps:
       - uses: actions/checkout@v4
-      - run: bash tests/guard.test.sh
-      - run: bash tests/scripts.test.sh
+      - name: Use ${{ matrix.awk }} as awk
+        run: |
+          command -v "${{ matrix.awk }}" >/dev/null \
+            || { sudo apt-get update -q && sudo apt-get install -y -q "${{ matrix.awk }}"; }
+          mkdir -p "$RUNNER_TEMP/awk"
+          ln -sf "$(command -v "${{ matrix.awk }}")" "$RUNNER_TEMP/awk/awk"
+          echo "$RUNNER_TEMP/awk" >> "$GITHUB_PATH"
+      - run: readlink -f "$(command -v awk)"; awk -W version 2>&1 | head -1
+      - run: bash tests/${{ matrix.suite }}.test.sh

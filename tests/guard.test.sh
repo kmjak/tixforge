@@ -322,16 +322,69 @@ git -C "$flow" checkout -q GT-000001-login
 git -C "$flow" branch -q -D LT-000003-x
 rm -rf "$flow/.tixforge/LT-000003"
 
+# The guard reads the hook input without jq: the same decisions without it.
 state="no jq"
 set_state implement:in-progress
 expect ask  "$flow"  'git push'              "$nojq"
 expect pass "$flow"  'git status'            "$nojq"
+expect ask  "$flow"  'git reset --hard'      "$nojq"
 expect pass "$plain" 'git stash push -m wip' "$nojq"
 expect pass "$plain" 'git push'              "$nojq"
 git -C "$flow" checkout -q main
-expect pass "$flow"  'git push'              "$nojq"
+expect ask  "$flow"  'git push'              "$nojq"
 git -C "$flow" checkout -q GT-000001-login
-reason_has "$flow" 'git push' 'jq' "$nojq"
+reason_has "$flow" 'git push' 'PR ゲート前' "$nojq"
+
+# JSON the fixtures' json_str does not write: escapes, and "command" inside
+# another string or object.
+state="hook input"
+expect_tool pass "$flow" Bash '{"command":"git st\u0061tus"}'
+expect_tool ask  "$flow" Bash '{"command":"echo \"a\\\\\"\ngit push"}'
+expect_tool ask  "$flow" Bash '{"description":"\"command\":\"git status\"","command":"git push"}'
+expect_tool pass "$flow" Bash '{"x":{"command":"git push"},"command":"git status"}'
+expect_tool pass "$flow" Bash '{"description":"git push","command":"ls"}'
+# A command that is not a string cannot be read: ask on a run's branch.
+expect_tool ask  "$flow"  Bash '{"command":["git push"]}'
+expect_tool pass "$plain" Bash '{"command":["git push"]}'
+
+# The JSON Claude Code sends, run from another directory (the guard must go
+# by the input's cwd, not its own) and without jq on PATH.
+hook_json() { # hook_json <cwd-json-string> <tool> <tool_input-json>
+  printf '{"session_id":"s1","transcript_path":"/tmp/t.jsonl","cwd":%s,"permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"%s","tool_input":%s,"tool_use_id":"toolu_1"}' "$1" "$2" "$3"
+}
+expect_raw() { # expect_raw <want> <cwd-json-string> <tool> <tool_input-json>
+  local input got
+  input=$(hook_json "$2" "$3" "$4")
+  got=$(verdict_of "$plain" "$input" "$nojq")
+  if [ "$got" = "$1" ]; then
+    pass=$((pass + 1))
+  else
+    fail=$((fail + 1))
+    printf 'FAIL  [%s] %s\n      want %s, got %s\n' "$state" "$input" "$1" "$got"
+  fi
+}
+state="hook input, as sent"
+at=$(json_str "$flow")
+expect_raw ask  "$at" Bash '{"command":"git push","description":"Push"}'
+expect_raw pass "$at" Bash '{"command":"git status","description":"Status"}'
+# A non-ASCII cwd written as \u escapes (a link to the run's repo).
+ln -s "$flow" "$tmp/日本"
+expect_raw ask  "\"$tmp/\\u65e5\\u672c\"" Bash '{"command":"git push"}'
+git -C "$flow" checkout -q main
+expect_raw ask  "$at" Bash '{"command":["git push"]}'
+git -C "$flow" checkout -q GT-000001-login
+set_state plan:awaiting-approval
+ti="{\"notebook_path\":\"$flow/src/n.ipynb\",\"new_source\":\"x\"}"
+expect_raw ask  "$at" NotebookEdit "$ti"
+ti="{\"notebook_path\":\"$flow/docs/n.ipynb\",\"new_source\":\"x\"}"
+expect_raw pass "$at" NotebookEdit "$ti"
+ti="{\"edits\":[{\"file_path\":\"$flow/docs/a.md\",\"old_string\":\"a\",\"new_string\":\"b\"}],\"file_path\":\"$flow/src/a.ts\"}"
+expect_raw ask  "$at" MultiEdit "$ti"
+ti="{\"file_path\":\"$flow/docs/\\u65e5.md\",\"edits\":[{\"old_string\":\"\\\"file_path\\\":\\\"src/a.ts\\\"\",\"new_string\":\"b\"}]}"
+expect_raw pass "$at" MultiEdit "$ti"
+# A path that cannot be read: ask while a run is before Implement.
+expect_raw ask  "$at" Edit '{"file_path":["x"],"old_string":"a","new_string":"b"}'
+set_state implement:in-progress
 
 echo "guard: $pass passed, $fail failed"
 [ $fail -eq 0 ]

@@ -32,25 +32,12 @@ set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 input=$(cat)
-
-have_jq=0
-command -v jq >/dev/null 2>&1 && have_jq=1
-
-if [ $have_jq -eq 1 ]; then
-  tool=$(printf '%s' "$input" | jq -r '.tool_name // empty')
-else
-  tool=$(printf '%s' "$input" | sed -n 's/.*"tool_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-fi
+tool=$(printf '%s' "$input" | json_get tool_name)
 
 # Cheap pre-filters: most calls never reach git.
 case "$tool" in
-  Bash|'')
-    if [ $have_jq -eq 1 ]; then
-      case "$input" in *git*|*gh*) ;; *) exit 0 ;; esac
-    else
-      case "$input" in *push*|*create*|*pulls*) ;; *) exit 0 ;; esac
-    fi ;;
-  Edit|Write|MultiEdit|NotebookEdit|mcp__*) [ $have_jq -eq 1 ] || exit 0 ;;
+  Bash|'') case "$input" in *git*|*gh*) ;; *) exit 0 ;; esac ;;
+  Edit|Write|MultiEdit|NotebookEdit|mcp__*) ;;
   *) exit 0 ;;
 esac
 case "$tool" in mcp__*) case "$tool" in *[Gg][Ii][Tt]*) ;; *) exit 0 ;; esac ;; esac
@@ -71,10 +58,8 @@ ask() {
 }
 
 cwd=$PWD
-if [ $have_jq -eq 1 ]; then
-  c=$(printf '%s' "$input" | jq -r '.cwd // empty')
-  [ -n "$c" ] && cwd=$c
-fi
+c=$(printf '%s' "$input" | json_get cwd)
+[ -n "$c" ] && cwd=$c
 
 top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
 
@@ -94,8 +79,9 @@ case "$tool" in
       esac
     done
     [ -n "$early" ] || exit 0
-    path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
-    [ -n "$path" ] || exit 0
+    path=$(printf '%s' "$input" | json_get tool_input.file_path)
+    [ -n "$path" ] || path=$(printf '%s' "$input" | json_get tool_input.notebook_path)
+    [ -n "$path" ] || ask "Plan の承認前の run があります：${early}。hook の入力から編集するファイルを読み取れなかったため、docs/・.tixforge/ の中かを判定できません。承認しますか？"
     case "$path" in /*) ;; *) path="$cwd/$path" ;; esac
     # Resolve symlinks (/tmp, /var on macOS) through the nearest existing
     # directory, as git does for the toplevel; the file may not exist yet.
@@ -143,13 +129,10 @@ esac
 
 # --- Bash ------------------------------------------------------------------
 
-if [ $have_jq -eq 0 ]; then
-  [ -n "$state" ] || exit 0
-  ask "jq が無いため、このコマンドが push / PR 作成かを詳しく判定できません。${where}。jq をインストールすると判定できます。"
-fi
-
-cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
-[ -n "$cmd" ] || exit 0
+cmd=$(printf '%s' "$input" | json_get tool_input.command)
+# The pre-filter saw git or gh in the input, so a command we cannot read is
+# asked about, not passed.
+[ -n "$cmd" ] || ask "hook の入力からコマンドを読み取れなかったため、push / PR 作成かを判定できません。${where}。承認しますか？"
 
 # Precise forms: a command segment starts at line start or after ; & | ( {
 # and may be prefixed by `command`, env assignments, or git/gh options.
