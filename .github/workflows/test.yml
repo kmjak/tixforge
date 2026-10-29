@@ -1,7 +1,10 @@
 name: test
 
+# push only on main: a PR's branch is tested by pull_request, so it does not
+# run twice.
 on:
   push:
+    branches: [main]
     paths:
       - "scripts/**"
       - "templates/**"
@@ -17,8 +20,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # One job per suite, in parallel; a failing suite does not stop the others.
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [guard, scripts, json-get]
     steps:
       - uses: actions/checkout@v4
-      - run: bash tests/guard.test.sh
-      - run: bash tests/scripts.test.sh
-      - run: bash tests/json-get.test.sh
+      # The scripts must work in the runner's awk too (mawk or gawk).
+      - run: readlink -f "$(command -v awk)"; awk -W version 2>&1 | head -1
+      - run: bash tests/${{ matrix.suite }}.test.sh
