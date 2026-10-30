@@ -1,0 +1,12 @@
+# Keeps the actions in .github/workflows/ up to date (pinned by hash). The
+# templates in templates/github/ are not scanned: users' repositories update
+# their copies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

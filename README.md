@@ -157,16 +157,20 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 ## tixforge 自体を開発する
 
 ```sh
+brew install shellcheck shfmt actionlint zizmor jq   # 初回だけ
+git config blame.ignoreRevsFile .git-blame-ignore-revs   # 初回だけ。整形だけの commit を blame から外す
 claude --plugin-dir .                     # 作業ツリーをそのまま読み込む
-claude plugin validate .                  # manifest の確認
-bash tests/guard.test.sh && bash tests/json-get.test.sh && bash tests/scripts.test.sh
-/bin/bash tests/guard.test.sh && /bin/bash tests/json-get.test.sh && /bin/bash tests/scripts.test.sh   # macOS の bash 3.2
+make check                                # PR の前に。lint・テスト・macOS の bash 3.2 でのテスト・claude plugin validate
+make fmt                                  # shfmt で整形（設定は .editorconfig）
 ```
+
+- CI（`.github/workflows/test.yml`）は、どの変更でも lint と 4 つのテストを、gawk・mawk・macOS（bash 3.2 と BWK awk）で回す。ブランチルールで必須にするのは `result` だけ。
 
 - `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
 - 結果が 1 つに決まる処理は `scripts/` に置き、テストで確かめる（gh はスタブに置き換える。`scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、guard が hook の入力を読む `json_get` を jq の結果とも突き合わせる）。
 - スクリプトの中で、`$var` の直後に全角文字を続けない（`${var}` と書く）。テストが検出する。
-- **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。上げた commit が `main` に入ると、Discord に前の版からマージされた PR の一覧が通知される（`.github/workflows/discord-merge-notify.yml`）。`claude plugin tag` で `tixforge--v<version>` のタグを作ってもよい。
+- **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。上げた commit が `main` に入ると、`tixforge--v<version>` のタグと GitHub Release が作られ、Discord に通知される。どちらにも前の版からマージされた PR の一覧が載る（`.github/workflows/release.yml`）。
+- **テンプレート**：`templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` はこれで更新の有無を判断する。
 
 ## License
 
