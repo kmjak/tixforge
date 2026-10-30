@@ -1,4 +1,4 @@
-# tixforge template: tixforge-issue-sync (v4). Installed by /tixforge:project init.
+# tixforge template: tixforge-issue-sync (v5). Installed by /tixforge:project init.
 # Keeps the status label of tixforge issues in step with pull requests, so
 # the issue shows the real state even when nobody runs /tixforge:dev:
 #   PR opened / reopened / ready for review  -> tixforge:in-review
@@ -35,6 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: .tixforge/config.yml
           sparse-checkout-cone-mode: false
       - name: Update the status labels
@@ -62,6 +63,7 @@ jobs:
               [ "$l" = "$3" ] && continue
               case ",$2," in *",$l,"*) args="$args --remove-label $l" ;; esac
             done
+            # shellcheck disable=SC2086 # $args is a list of flags
             gh issue edit "$1" $args --add-label "$3"
           }
 

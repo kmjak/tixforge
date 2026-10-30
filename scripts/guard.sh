@@ -29,6 +29,7 @@
 # exit 2 = deny; stderr goes to Claude. JSON on stdout = ask; the reason
 # goes to the user only.
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 input=$(cat)

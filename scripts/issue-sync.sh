@@ -33,6 +33,7 @@
 #       fetched, 6 the ticket folder already exists (create), other: gh failed.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$here/lib.sh"
 hash_sh="$here/ticket-hash.sh"
 

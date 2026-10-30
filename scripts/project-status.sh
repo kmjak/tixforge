@@ -3,6 +3,7 @@
 # the settings and the open runs are in context before anything is read.
 # Always exits 0: a failing injected command would abort the skill.
 set -u
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 top=$(flow_top)

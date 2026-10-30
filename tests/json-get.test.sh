@@ -9,6 +9,7 @@
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$here/../scripts/lib.sh"
 
 tmp=$(mktemp -d)

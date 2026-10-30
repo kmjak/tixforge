@@ -23,6 +23,7 @@
 # says which branch is its own. Exit: 0 ok, 2 usage, 3 nothing to migrate.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$here/lib.sh"
 
 apply="" github=""
@@ -92,7 +93,10 @@ fi
 # --- tickets and runs --------------------------------------------------------
 ids=$({
   ls docs/tickets 2> /dev/null | sed -n 's/\.md$//p'
-  ls docs/flow 2> /dev/null | grep -v '^\.'
+  for d in docs/flow/*; do
+    [ -e "$d" ] || continue
+    printf '%s\n' "${d##*/}"
+  done
 } | sort -u)
 for old in $ids; do
   t="docs/tickets/$old.md"

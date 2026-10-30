@@ -1,4 +1,4 @@
-# tixforge template: tixforge-ci (v2). A starting point that /tixforge:project init
+# tixforge template: tixforge-ci (v3). A starting point that /tixforge:project init
 # fills in with the user: the setup steps depend on the project, the verify
 # steps are .tixforge/config.yml `commands` in the same order, so CI and
 # /tixforge:dev verify the same things.
@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # __SETUP__ : toolchain and dependencies, e.g.
       #   - uses: actions/setup-node@v4
       #     with: { node-version-file: .nvmrc, cache: npm }

@@ -59,6 +59,7 @@ eq "" "$bad" "no \$var directly followed by a non-ASCII character"
 
 # --- lib.sh ----------------------------------------------------------------
 section="lib.sh cfg"
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$scripts/lib.sh"
 eq ja "$(cfg language)" "top-level scalar with comment"
 eq local "$(cfg ticket.tracker)" "nested scalar"

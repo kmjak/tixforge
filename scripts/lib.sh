@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared helpers for the tixforge scripts. Source it:
 #   . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 # Portable to macOS bash 3.2 and BWK awk (no gawk, no yq).
@@ -26,6 +27,7 @@ ensure_workspace() {
 
 # Ticket ids: LT-<6 digits> for local tickets, GT-<6 digits> for GitHub
 # issues (GT-000123 is issue #123). More than 6 digits are written as is.
+# shellcheck disable=SC2034 # used by ticket-id.sh
 ID_PAD=6
 is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^(LT|GT)-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
 id_kind() { printf '%s\n' "${1%%-*}"; } # LT | GT

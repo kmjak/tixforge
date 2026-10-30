@@ -18,6 +18,7 @@
 # Exit: 0 all passed (or `commands: {}`), 1 something failed,
 #       3 `commands` is missing from the config (an older /tixforge:project init).
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 top=$(flow_top)

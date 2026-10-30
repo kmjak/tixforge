@@ -28,6 +28,7 @@
 # Exit: 0 ok, 1 no such run, 2 usage or invalid value (a phase after the
 #       current one, too), 3 run already exists, 4 the run is done or canceled.
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 usage() {

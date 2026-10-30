@@ -7,11 +7,12 @@
 # Prints nothing (and changes nothing) anywhere else.
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$here/lib.sh"
 
 input=$(cat)
 cwd=$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-[ -n "$cwd" ] && [ -d "$cwd" ] && cd "$cwd"
+[ -n "$cwd" ] && [ -d "$cwd" ] && { cd "$cwd" || true; }
 
 top=$(git rev-parse --show-toplevel 2> /dev/null) || exit 0
 branch=$(git symbolic-ref --short -q HEAD 2> /dev/null || true)

@@ -28,6 +28,7 @@
 #
 # Exit: 0 ok, 1 exists: none, 2 invalid id or usage, 3 gh failed.
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 usage() {
