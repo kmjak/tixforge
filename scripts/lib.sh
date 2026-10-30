@@ -2,7 +2,7 @@
 #   . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 # Portable to macOS bash 3.2 and BWK awk (no gawk, no yq).
 
-flow_top() { git rev-parse --show-toplevel 2>/dev/null || pwd; }
+flow_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
 
 # Everything tixforge keeps in a project lives under .tixforge/:
 #   .tixforge/config.yml        settings (in git, shared)
@@ -28,16 +28,17 @@ ensure_workspace() {
 # issues (GT-000123 is issue #123). More than 6 digits are written as is.
 ID_PAD=6
 is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^(LT|GT)-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
-id_kind() { printf '%s\n' "${1%%-*}"; }                       # LT | GT
+id_kind() { printf '%s\n' "${1%%-*}"; } # LT | GT
 # issue_of <id>: the issue number of a GT id, or nothing.
-issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac; }
+issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac }
 
 # msg <key>: a fixed message in the document language, from messages.yml
 # next to the scripts (English when the language has none).
 msg() {
   local lang file v
   file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/messages.yml"
-  lang=$(cfg language); lang=${lang:-ja}
+  lang=$(cfg language)
+  lang=${lang:-ja}
   v=$(cfg "$lang.$1" "$file")
   [ -n "$v" ] || v=$(cfg "en.$1" "$file")
   printf '%s\n' "$v"
@@ -245,4 +246,4 @@ json_get() {
 flow_now() { date '+%Y-%m-%d %H:%M'; }
 
 # is_open_status <status>: a run that is neither done nor canceled.
-is_open_status() { case "$1" in done|canceled|'') return 1 ;; *) return 0 ;; esac; }
+is_open_status() { case "$1" in done | canceled | '') return 1 ;; *) return 0 ;; esac }

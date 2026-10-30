@@ -31,19 +31,21 @@ fi
 # tree_state: the changed files and a checksum of their changes, to notice a
 # command that rewrites files.
 tree_state() {
-  git -C "$top" status --porcelain 2>/dev/null
-  git -C "$top" diff HEAD --binary 2>/dev/null | cksum
+  git -C "$top" status --porcelain 2> /dev/null
+  git -C "$top" diff HEAD --binary 2> /dev/null | cksum
 }
 
-hash=$(git -C "$top" rev-parse --short HEAD 2>/dev/null || echo none)
-[ -n "$(git -C "$top" status --porcelain 2>/dev/null)" ] && hash="${hash}+dirty"
+hash=$(git -C "$top" rev-parse --short HEAD 2> /dev/null || echo none)
+[ -n "$(git -C "$top" status --porcelain 2> /dev/null)" ] && hash="${hash}+dirty"
 before=$(tree_state)
 
-logdir="$(git -C "$top" rev-parse --absolute-git-dir 2>/dev/null || echo "$top")/tixforge/verify"
+logdir="$(git -C "$top" rev-parse --absolute-git-dir 2> /dev/null || echo "$top")/tixforge/verify"
 mkdir -p "$logdir"
 
 tab=$(printf '\t')
-results=""; failed=""; ran=0
+results=""
+failed=""
+ran=0
 while IFS="$tab" read -r key command; do
   [ -n "$key" ] || continue
   ran=1
@@ -55,7 +57,7 @@ while IFS="$tab" read -r key command; do
     failed="${failed}log $key: $log
 "
   fi
-done <<EOF
+done << EOF
 $(cfg_map commands "$conf")
 EOF
 
@@ -66,7 +68,7 @@ fi
 changed=""
 if [ "$(tree_state)" != "$before" ]; then
   case $hash in *+dirty) ;; *) hash="${hash}+dirty" ;; esac
-  changed=$(git -C "$top" status --porcelain 2>/dev/null)
+  changed=$(git -C "$top" status --porcelain 2> /dev/null)
 fi
 echo "Verification @ $hash: $results"
 if [ -n "$changed" ]; then

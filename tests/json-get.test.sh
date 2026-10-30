@@ -14,16 +14,32 @@ here=$(cd "$(dirname "$0")" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-pass=0; fail=0; section=""
+pass=0
+fail=0
+section=""
 ok() { pass=$((pass + 1)); }
-ng() { fail=$((fail + 1)); printf 'FAIL  [%s] %s\n' "$section" "$1"; }
+ng() {
+  fail=$((fail + 1))
+  printf 'FAIL  [%s] %s\n' "$section" "$1"
+}
 
 # get <path> <json>: json_get's output, trailing newlines kept.
-get() { local v; v=$(printf '%s' "$2" | json_get "$1"; printf x); printf '%s' "${v%x}"; }
+get() {
+  local v
+  v=$(
+    printf '%s' "$2" | json_get "$1"
+    printf x
+  )
+  printf '%s' "${v%x}"
+}
 # check <path> <json> <want> [what]
 check() {
   local got
-  got=$(get "$1" "$2"; printf x); got=${got%x}
+  got=$(
+    get "$1" "$2"
+    printf x
+  )
+  got=${got%x}
   if [ "$got" = "$3" ]; then ok; else ng "${4:-$2} ($1): want [$3], got [$got]"; fi
 }
 
@@ -73,14 +89,14 @@ check cwd '{"cwd":"日本語 😀"}' '日本語 😀'
 # A UTF-8 locale may collate "cwd" equal to "cwdあ" (macOS awk does).
 section="locale"
 for l in C en_US.UTF-8 ja_JP.UTF-8 C.UTF-8; do
-  got=$(printf '%s' '{"cwdあ":"no","cwd":"yes"}' | LC_ALL=$l json_get cwd 2>/dev/null)
+  got=$(printf '%s' '{"cwdあ":"no","cwd":"yes"}' | LC_ALL=$l json_get cwd 2> /dev/null)
   [ "$got" = yes ] && ok || ng "LC_ALL=$l: want [yes], got [$got]"
 done
 
 # --- 2. random objects, compared with jq -------------------------------------
 
 section="jq"
-if command -v jq >/dev/null 2>&1; then
+if command -v jq > /dev/null 2>&1; then
   # One object per line, with no duplicate keys and no lone surrogates
   # (jq rejects both).
   LC_ALL=C awk -v n=200 'BEGIN {
@@ -113,15 +129,21 @@ if command -v jq >/dev/null 2>&1; then
   jq -j --arg ps "$paths" '($ps | split(" ")[]) as $p
     | (try (getpath($p | split(".")) | if type == "string" then . else "" end) catch "") + "\u0000"' \
     "$tmp/random.jsonl" > "$tmp/want"
-  bad=0; i=0
+  bad=0
+  i=0
   exec 3< "$tmp/want"
   while IFS= read -r line; do
     i=$((i + 1))
     for p in $paths; do
       IFS= read -r -d '' want <&3
-      got=$(get "$p" "$line"; printf x); got=${got%x}
+      got=$(
+        get "$p" "$line"
+        printf x
+      )
+      got=${got%x}
       if [ "$want" = "$got" ]; then ok; else
-        bad=$((bad + 1)); [ $bad -le 5 ] && ng "line $i ($p): $line
+        bad=$((bad + 1))
+        [ $bad -le 5 ] && ng "line $i ($p): $line
       jq [$want] json_get [$got]"
       fi
     done
@@ -139,8 +161,11 @@ fi
 section="long"
 # within <seconds> <what> <command...>: the command finishes in time.
 within() {
-  local limit=$1 what=$2 start end; shift 2
-  start=$(date +%s); "$@"; end=$(date +%s)
+  local limit=$1 what=$2 start end
+  shift 2
+  start=$(date +%s)
+  "$@"
+  end=$(date +%s)
   if [ $((end - start)) -le "$limit" ]; then ok; else ng "$what took $((end - start))s (limit ${limit}s)"; fi
 }
 # A 4 MB heredoc: 400,000 lines with escaped quotes and backslashes.

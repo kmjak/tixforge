@@ -13,16 +13,20 @@ input=$(cat)
 cwd=$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 [ -n "$cwd" ] && [ -d "$cwd" ] && cd "$cwd"
 
-top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-branch=$(git symbolic-ref --short -q HEAD 2>/dev/null || true)
+top=$(git rev-parse --show-toplevel 2> /dev/null) || exit 0
+branch=$(git symbolic-ref --short -q HEAD 2> /dev/null || true)
 
-run=""; early=""
+run=""
+early=""
 for f in "$(tf_dir "$top")"/*/state.md; do
   [ -f "$f" ] || continue
   st=$(field "$f" Status)
   is_open_status "$st" || continue
-  if [ -n "$branch" ] && [ "$(field "$f" Branch)" = "$branch" ]; then run=$f; break; fi
-  case "$st" in research:*|approach:*|plan:*) early="${early}${early:+
+  if [ -n "$branch" ] && [ "$(field "$f" Branch)" = "$branch" ]; then
+    run=$f
+    break
+  fi
+  case "$st" in research:* | approach:* | plan:*) early="${early}${early:+
 }$f" ;; esac
 done
 # Not on a run's branch: a run before Implement has no branch yet. Remind
@@ -31,8 +35,11 @@ if [ -z "$run" ] && [ -n "$early" ]; then
   [ "$(printf '%s\n' "$early" | wc -l)" -eq 1 ] && run=$early
 fi
 if [ -z "$run" ] && [ -n "$early" ]; then
-  ids=$(printf '%s\n' "$early" | while IFS= read -r f; do d=${f%/state.md}; printf '%s ' "${d##*/}"; done)
-  cat <<EOF
+  ids=$(printf '%s\n' "$early" | while IFS= read -r f; do
+    d=${f%/state.md}
+    printf '%s ' "${d##*/}"
+  done)
+  cat << EOF
 [tixforge] この作業ディレクトリには Plan の承認前の run が複数あります（${ids% }）。会話が要約・再開されたため、どの run を進めていたかをユーザーに確認し、その run の状態ファイル（.tixforge/<id>/state.md）と次を Read し直してください:
 - ${here%/scripts}/skills/dev/run.md
 - ${here%/scripts}/references/common.md
@@ -41,12 +48,13 @@ EOF
 fi
 [ -n "$run" ] || exit 0
 
-id=${run%/state.md}; id=${id##*/}
+id=${run%/state.md}
+id=${id##*/}
 st=$(field "$run" Status)
 extra=""
 case "$st" in pr:*) extra="
 - ${here%/scripts}/skills/dev/pr.md" ;; esac
-cat <<EOF
+cat << EOF
 [tixforge] この作業ディレクトリでは /tixforge:dev の run ${id} が進行中です（Status: $(field "$run" Status)、Branch: $(field "$run" Branch)）。
 会話が要約・再開されたため、手順書の細部が失われている可能性があります。tixforge の作業を続ける前に、次を Read し直してください:
 - ${here%/scripts}/skills/dev/run.md${extra}

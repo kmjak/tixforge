@@ -14,12 +14,12 @@ set -euo pipefail
 before=$1 after=$2
 file=.claude-plugin/plugin.json
 
-version_at() { git show "$1:$file" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true; }
-name_at() { git show "$1:$file" 2>/dev/null | jq -r '.name // empty' 2>/dev/null || true; }
+version_at() { git show "$1:$file" 2> /dev/null | jq -r '.version // empty' 2> /dev/null || true; }
+name_at() { git show "$1:$file" 2> /dev/null | jq -r '.name // empty' 2> /dev/null || true; }
 
 new=$(version_at "$after")
 old=""
-git cat-file -e "$before^{commit}" 2>/dev/null && old=$(version_at "$before")
+git cat-file -e "$before^{commit}" 2> /dev/null && old=$(version_at "$before")
 [ -n "$new" ] && [ "$new" != "$old" ] || exit 0
 name=$(name_at "$after")
 
@@ -44,7 +44,7 @@ prs=$(
     # A commit GitHub does not know (not pushed) has no PR: skip it.
     out=$(gh api "repos/{owner}/{repo}/commits/$sha/pulls" \
       --jq ".[] | select(.merged_at != null and .base.ref == \"$default\")
-            | [.number, .title, .user.login, .html_url] | @tsv" 2>/dev/null) || continue
+            | [.number, .title, .user.login, .html_url] | @tsv" 2> /dev/null) || continue
     if [ -n "$out" ]; then printf '%s\n' "$out"; fi
   done | sort -t "$(printf '\t')" -k1,1n -u
 )
