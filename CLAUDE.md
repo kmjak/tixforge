@@ -21,10 +21,16 @@ Claude Code の plugin。構成と開発の手順は README の「tixforge 自�
 
 ## commit と PR
 
-- commit メッセージは英語。件名は命令形の 1 文（接頭辞なし）、本文に「なぜ」を書く。
-- 整形だけの commit は単独にし、`.git-blame-ignore-revs` に足す。
-- 1 ブランチ 1 PR、merge commit でマージする。`main` に直接 push しない。
-- version を上げるときは `.claude-plugin/plugin.json` だけを変える `Version x.y.z` の commit にする。
+- 1 ブランチ 1 PR、squash でマージする。`main` に直接 push しない。
+- **PR のタイトル**が main の commit になり、release-please が次の version と CHANGELOG を決める。Conventional Commits の形で英語で書く（CI が検査する）：`<type>[(scope)][!]: <命令形の 1 文>`。
+  - `feat`：利用者に届く機能の追加（スキル・サブコマンド・設定項目・hook・スクリプトの機能）→ マイナー
+  - `fix`：利用者に届く不具合の修正・手順書の改善 → パッチ
+  - `feat!` / `fix!`：`config.yml` のキーや `.tixforge/` の構造が変わり、移行が要る → メジャー
+  - `docs`（README だけ）・`test`・`ci`・`build`・`chore`・`refactor`：リリースにならない
+  - **`skills/`・`references/`・`agents/`・`templates/` の md や yml の変更は `docs` にしない。** 手順書は tixforge の振る舞いそのものなので `feat` か `fix` にする。`docs` にすると利用者に届かない。
+- PR の中の commit は英語。件名は命令形の 1 文、本文に「なぜ」を書く（squash の本文に並ぶ）。
+- 整形だけの変更は単独の PR にし、マージ後の commit を `.git-blame-ignore-revs` に足す。
+- version は手で上げない。release-please のリリース PR（`chore(main): release tixforge x.y.z`）をマージすると、version・CHANGELOG・タグ・GitHub Release・Discord 通知が揃う。
 
 ## `.local/`（git の外）
 
