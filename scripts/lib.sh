@@ -3,7 +3,7 @@
 #   . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 # Portable to macOS bash 3.2 and BWK awk (no gawk, no yq).
 
-flow_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
+tf_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
 
 # Everything tixforge keeps in a project lives under .tixforge/:
 #   .tixforge/config.yml        settings (in git, shared)
@@ -11,8 +11,8 @@ flow_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
 #   .tixforge/<id>/ticket.md    a ticket (LT: the ticket itself; GT: a working
 #                               copy of the issue)
 #   .tixforge/<id>/state.md     the run of that ticket
-tf_dir() { printf '%s/.tixforge\n' "${1:-$(flow_top)}"; }
-flow_config() { printf '%s/config.yml\n' "$(tf_dir "${1:-}")"; }
+tf_dir() { printf '%s/.tixforge\n' "${1:-$(tf_top)}"; }
+tf_config() { printf '%s/config.yml\n' "$(tf_dir "${1:-}")"; }
 ticket_file() { printf '%s/%s/ticket.md\n' "$(tf_dir "${2:-}")" "$1"; }
 state_file() { printf '%s/%s/state.md\n' "$(tf_dir "${2:-}")" "$1"; }
 
@@ -77,7 +77,7 @@ function valof(s) { sub(/^[^:]*:/, "", s); return clean(s) }
 # cfg <key> [config-file]: value of "language" or "ticket.tracker".
 # Prints nothing when the key is absent.
 cfg() {
-  local file=${2:-$(flow_config)}
+  local file=${2:-$(tf_config)}
   [ -f "$file" ] || return 0
   awk -v want="$1" "$_cfg_awk"'
     /^[^ \t]/ { parent = keyof($0); if (parent == want) { print valof($0); exit } next }
@@ -87,7 +87,7 @@ cfg() {
 
 # cfg_has <top-level-key> [config-file]: exit 0 when the key exists.
 cfg_has() {
-  local file=${2:-$(flow_config)}
+  local file=${2:-$(tf_config)}
   [ -f "$file" ] || return 1
   awk -v want="$1" "$_cfg_awk"'
     /^[^ \t]/ && keyof($0) == want { found = 1; exit }
@@ -98,7 +98,7 @@ cfg_has() {
 # cfg_map <top-level-key> [config-file]: "key<TAB>value" per nested key,
 # in file order (commands run in the order they are written).
 cfg_map() {
-  local file=${2:-$(flow_config)}
+  local file=${2:-$(tf_config)}
   [ -f "$file" ] || return 0
   awk -v want="$1" "$_cfg_awk"'
     /^[^ \t]/ { parent = keyof($0); next }
@@ -109,7 +109,7 @@ cfg_map() {
 # cfg_list <top-level-key> [config-file]: one item per line, from either
 # `key: [a, b]` or a block list of `- a` lines.
 cfg_list() {
-  local file=${2:-$(flow_config)}
+  local file=${2:-$(tf_config)}
   [ -f "$file" ] || return 0
   awk -v want="$1" "$_cfg_awk"'
     /^[^ \t]/ {
@@ -245,7 +245,7 @@ json_get() {
   '
 }
 
-flow_now() { date '+%Y-%m-%d %H:%M'; }
+tf_now() { date '+%Y-%m-%d %H:%M'; }
 
 # is_open_status <status>: a run that is neither done nor canceled.
 is_open_status() { case "$1" in done | canceled | '') return 1 ;; *) return 0 ;; esac }

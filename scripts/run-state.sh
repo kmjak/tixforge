@@ -36,7 +36,7 @@ usage() {
   exit 2
 }
 
-top=$(flow_top)
+top=$(tf_top)
 sfile() { state_file "$1" "$top"; }
 
 valid_status() {
@@ -102,7 +102,7 @@ case $cmd in
       printf '| %-7s | %-34s |\n' Field Value
       printf '|---------|------------------------------------|\n'
       printf '| %-7s | %-34s |\n' Status research:in-progress \
-        Branch — Base — Updated "$(flow_now)"
+        Branch — Base — Updated "$(tf_now)"
       cat << 'EOF'
 
 ## Research
@@ -154,7 +154,7 @@ EOF
         ;;
     esac
     put "$f" "$2" "$3"
-    put "$f" Updated "$(flow_now)"
+    put "$f" Updated "$(tf_now)"
     field "$f" "$2"
     ;;
   rewind)
@@ -217,7 +217,7 @@ EOF
       echo "cannot rewind to $phase: run $id is at $before (rewind goes back, not forward)" >&2
       exit 2
     fi
-    now=$(flow_now)
+    now=$(tf_now)
     # Two rewinds in the same second must not share a file (awk truncates it).
     stamp=$(date '+%Y%m%d-%H%M%S')
     hist="$(dirname "$f")/history/$stamp.md"

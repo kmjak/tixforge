@@ -23,21 +23,6 @@ claude plugin install tixforge@tixforge
 
 plugin には、スキル 3 つ・Review 用の agent 2 つ（`tixforge:reviewer`・`tixforge:quality-reviewer`）・hook 2 つ（下記「hook」）が入っている。個別に導入・登録するものは無い。
 
-### flow（1.x）からの移行
-
-tixforge は、以前の `/flow`（`flow@flow-command`）の後継。
-
-1. 古い plugin を外す：`claude plugin uninstall flow@flow-command`、`claude plugin marketplace remove flow-command`
-2. 上の「導入」で tixforge を入れる
-3. flow を使っていた各プロジェクトのルートで、移行スクリプトを実行する（まず試し実行で内容を確かめる）：
-   ```sh
-   bash ~/.claude/plugins/marketplaces/tixforge/scripts/migrate-from-flow.sh            # 試し実行
-   bash ~/.claude/plugins/marketplaces/tixforge/scripts/migrate-from-flow.sh --apply    # 実行
-   bash ~/.claude/plugins/marketplaces/tixforge/scripts/migrate-from-flow.sh --apply --github  # GitHub のラベルと issue も
-   ```
-   設定（`docs/flow.config.yml` → `.tixforge/config.yml`）、チケット（`docs/tickets/` → `.tixforge/<id>/ticket.md`。issue のあるものは `GT-`、無いものは `LT-`）、run（`docs/flow/` → `.tixforge/<id>/state.md`）、workflow（`flow-*.yml` → `tixforge-*.yml`）を移す。`--github` なら、`flow:*` のラベルを `tixforge:*` に変え、issue 本文の目印を書き換え、閉じた issue に `tixforge:done`・`tixforge:canceled` を付ける。最後に `git status` で確かめて commit する。
-4. `/tixforge:project init` を実行して、足りない設定（`repository.close_issues` など）を足す
-
 ## 置き場所
 
 | パス | 内容 | git |

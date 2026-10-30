@@ -172,7 +172,7 @@ case $cmd in
     mkdir -p "$(dirname "$file")"
     write_copy "$file" "$id" "$t" "$tmpd/ticket"
     bash "$hash_sh" hash "$t" < "$tmpd/ticket" > "$(hashfile "$file")"
-    echo "file: ${file#$(flow_top)/}"
+    echo "file: ${file#$(tf_top)/}"
     ;;
 
   check)

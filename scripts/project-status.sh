@@ -6,8 +6,8 @@ set -u
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
-top=$(flow_top)
-conf=$(flow_config "$top")
+top=$(tf_top)
+conf=$(tf_config "$top")
 
 echo "- リポジトリ: ${top}"
 if git -C "$top" rev-parse --git-dir > /dev/null 2>&1; then
