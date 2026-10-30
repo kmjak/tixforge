@@ -148,6 +148,32 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 - 検知はあえて広めにしている（引用符を外して `git` と `push` の組み合わせを拾うなど）。誤検知しても確認画面が出るだけ。commit メッセージに「push -f」と書いただけならブロックしない（確認画面に注記が付く）。
 - **事故防止の仕組みであって、完全な防御ではない。** Claude が実行できるコマンドは、どんな検知もすり抜ける書き方ができる。サーバー側で確実に守りたいことは、Actions（`tixforge-pr-link`）とブランチ保護で守る。
 
+## statusline
+
+Claude Code の画面の下に、今いる場所の run と Status を出せる（任意。plugin を入れただけでは出ない）。
+
+```
+LT-000001 · plan:awaiting-approval
+```
+
+今のブランチの run を出す。どの run のブランチでもなければ、Plan の承認前の run（まだブランチが無い）を出し、複数あれば先頭の 1 つに `(+<残りの数>)` を付ける。run が無い場所では何も出さない。
+
+statusline を使っていなければ、`~/.claude/settings.json` に足す：
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "bash ~/.claude/plugins/marketplaces/tixforge/scripts/statusline.sh"
+}
+```
+
+自分の statusline のスクリプトがあれば、受け取った入力をそのまま渡して、出力を好きな位置に入れる：
+
+```sh
+input=$(cat)
+tf=$(printf '%s' "$input" | bash ~/.claude/plugins/marketplaces/tixforge/scripts/statusline.sh)
+```
+
 ## 困ったとき
 
 - **run の状態ファイルが壊れた**：`.tixforge/<id>/state.md` を消せば、`/tixforge:dev <id>` で最初から始まる（チケットは残る）。

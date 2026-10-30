@@ -267,6 +267,27 @@ has "LT-000001 LT-000002" "$out" "both are listed"
 rm -rf .tixforge/LT-000002
 bash "$scripts/run-state.sh" set LT-000001 Status implement:in-progress > /dev/null
 
+# --- statusline.sh ---------------------------------------------------------
+section="statusline.sh"
+sl() { printf '%s' "$1" | bash "$scripts/statusline.sh"; }
+git switch -q LT-000001-a
+eq "LT-000001 · implement:in-progress" "$(sl "{\"cwd\":\"$repo\"}")" "the run on this branch"
+eq "LT-000001 · implement:in-progress" "$(sl "{\"workspace\":{\"current_dir\":\"$repo\"}}")" "workspace.current_dir when there is no cwd"
+mkdir -p sub
+eq "LT-000001 · implement:in-progress" "$(sl "{\"cwd\":\"$repo/sub\"}")" "from a subdirectory"
+rmdir sub
+git switch -q main
+eq "" "$(sl "{\"cwd\":\"$repo\"}")" "nothing on main with no run before Implement"
+bash "$scripts/run-state.sh" set LT-000001 Status plan:awaiting-approval > /dev/null
+eq "LT-000001 · plan:awaiting-approval" "$(sl "{\"cwd\":\"$repo\"}")" "the only run before Implement"
+bash "$scripts/run-state.sh" init LT-000002 > /dev/null
+eq "LT-000001 · plan:awaiting-approval (+1)" "$(sl "{\"cwd\":\"$repo\"}")" "several runs before Implement"
+rm -rf .tixforge/LT-000002
+bash "$scripts/run-state.sh" set LT-000001 Status implement:in-progress > /dev/null
+eq "" "$(sl "{\"cwd\":\"$tmp\"}")" "nothing outside a repository"
+eq "" "$(sl '{}')" "nothing without a directory"
+eq "" "$(sl "{\"cwd\":\"$repo/missing\"}")" "nothing for a missing directory"
+
 # --- verify.sh -------------------------------------------------------------
 section="verify.sh"
 echo wip > wip.txt

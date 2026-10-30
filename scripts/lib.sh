@@ -249,3 +249,22 @@ flow_now() { date '+%Y-%m-%d %H:%M'; }
 
 # is_open_status <status>: a run that is neither done nor canceled.
 is_open_status() { case "$1" in done | canceled | '') return 1 ;; *) return 0 ;; esac }
+
+# current_runs <top> <branch>: the state.md of the open run on <branch>, or,
+# when no run is on it, of every open run before Implement (those have no
+# branch yet), one per line. Prints nothing when there is neither.
+current_runs() {
+  local f st early=""
+  for f in "$(tf_dir "$1")"/*/state.md; do
+    [ -f "$f" ] || continue
+    st=$(field "$f" Status)
+    is_open_status "$st" || continue
+    if [ -n "$2" ] && [ "$(field "$f" Branch)" = "$2" ]; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+    case "$st" in research:* | approach:* | plan:*) early="${early}${f}
+" ;; esac
+  done
+  printf '%s' "$early"
+}
