@@ -1,7 +1,8 @@
-# Notify Discord when a new version reaches the default branch: the version
-# change and every PR merged since the previous version. Pushes that do not
-# change "version" in .claude-plugin/plugin.json send nothing.
-name: discord-release-notify
+# When a new version reaches the default branch: tag it and make a GitHub
+# Release (tixforge--v<version>, as claude plugin tag names it), then notify
+# Discord. Both list every PR merged since the previous version. Pushes that
+# do not change "version" in .claude-plugin/plugin.json do nothing.
+name: release
 
 on:
   push:
@@ -11,10 +12,12 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
-  notify:
+  release:
+    permissions:
+      contents: write # the tag and the Release
+      pull-requests: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -34,6 +37,21 @@ jobs:
             echo "send=true" >> "$GITHUB_OUTPUT"
           else
             echo "version unchanged: nothing to send"
+          fi
+      - name: Make the tag and the Release
+        if: steps.payload.outputs.send == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AFTER: ${{ github.sha }}
+        run: |
+          tag="tixforge--v$(jq -r .version .claude-plugin/plugin.json)"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "$tag: already released"
+          else
+            jq -r '.embeds[0].description' "$RUNNER_TEMP/payload.json" > "$RUNNER_TEMP/notes.md"
+            gh release create "$tag" --target "$AFTER" --title "$(jq -r '.embeds[0].title' "$RUNNER_TEMP/payload.json")" \
+              --notes-file "$RUNNER_TEMP/notes.md"
           fi
       - name: Notify Discord
         if: steps.payload.outputs.send == 'true'
