@@ -12,14 +12,13 @@ make check                                # PR の前に。lint・4 つのテス
 make fmt                                  # shfmt で整形（設定は .editorconfig）
 ```
 
-- CI（`.github/workflows/test.yml`）は `make check` と同じものを、gawk・mawk・macOS（bash 3.2 と BWK awk）で回す。ブランチルールで必須にするのは `result` だけ。
+- CI（`.github/workflows/test.yml`）は、lint と 4 つのテストを回し、テストは gawk・mawk・macOS（bash 3.2 と BWK awk）のそれぞれで動かす。ブランチルールで必須にするのは `result` だけ。
 - `scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、`json_get` を jq の結果とも突き合わせる。
 
 ## 構成
 
 - `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。
 - 手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
-- 結果が 1 つに決まる処理は `scripts/`、そのテストは `tests/`。
 
 ## ルール
 
