@@ -1,28 +1,50 @@
 # tixforge の開発
 
-Claude Code の plugin。構成と開発の手順は README の「tixforge 自体を開発する」を読む。
+Claude Code の plugin。利用者向けの説明は README にある。
 
-## 確かめ方
+## 準備と確かめ方
 
-- 変更したら `make check` を通す（lint・4 つのテスト・macOS の bash 3.2 でのテスト・`claude plugin validate`）。CI も同じものを回す。
-- スクリプトは `make fmt` で整形する。手で整えない。
+```sh
+brew install shellcheck shfmt actionlint zizmor editorconfig-checker jq   # 初回だけ
+git config blame.ignoreRevsFile .git-blame-ignore-revs   # 初回だけ。整形だけの commit を blame から外す
+claude --plugin-dir .                     # 作業ツリーをそのまま読み込む
+make check                                # PR の前に。lint・4 つのテスト・macOS の bash 3.2 でのテスト・claude plugin validate
+make fmt                                  # shfmt で整形（設定は .editorconfig）
+```
 
-## スクリプト
+- CI（`.github/workflows/test.yml`）は、lint と 4 つのテストを回し、テストは gawk・mawk・macOS（bash 3.2 と BWK awk）のそれぞれで動かす。ブランチルールで必須にするのは `result` だけ。
+- `scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、`json_get` を jq の結果とも突き合わせる。
 
-- macOS の bash 3.2 と BWK awk、Linux の gawk・mawk のどれでも動かす。連想配列・`mapfile`・`${var,,}`、gawk だけの関数は使わない。
-- guard（hook）は jq に頼らない。`lib.sh` の `json_get` で読む。
-- `$var` の直後に全角文字を続けない（`${var}` と書く）。
-- 結果が 1 つに決まる処理は `scripts/` に置き、`tests/` で確かめる。gh はスタブに置き換える。
+## 構成
 
-## 手順ファイルとテンプレート
+- `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。
+- 手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
 
-- `skills/`・`references/`・`agents/` でファイルの名前を変えたら、参照している側も直す（`tests/plugin.test.sh` が検出する）。
-- `templates/github/` を変えたら、先頭のコメントの版数を上げる。
+## ルール
+
+ルールを足すときは、機械的に確かめられるものはテストにして「テストで守るもの」に、判断を要するものは理由と一緒に「判断を要するもの」に書く。
+
+### 判断を要するもの
+
+- 結果が 1 つに決まる処理と、一字も変えずに写すべき処理は `scripts/` に置き、`tests/` で確かめる。gh はスタブに置き換える。手順ファイルの文章は、守られるとは限らないため。
+- 手順ファイルは使う場面で Read させ、SKILL.md と共通規約は短く保つ。毎回読まれるため。
+- `templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` は版数で更新の有無を判断する。
+
+### テストで守るもの
+
+| ルール | 守るもの |
+|---|---|
+| macOS の bash 3.2 と BWK awk、Linux の gawk・mawk のどれでも動かす。連想配列・`mapfile`・`${var,,}`、gawk だけの関数は使わない | `make test-bash32`・CI の gawk・mawk・macOS の行列 |
+| guard（hook）は jq に頼らない。`lib.sh` の `json_get` で読む | `tests/guard.test.sh`（jq の無い PATH で動かす）・`tests/json-get.test.sh` |
+| スクリプトの中で、`$var` の直後に全角文字を続けない（`${var}` と書く） | `tests/scripts.test.sh` の「all scripts」 |
+| `skills/`・`references/`・`agents/` でファイルの名前を変えたら、参照している側も直す | `tests/plugin.test.sh` |
+| スクリプトは `make fmt` で整形する。手で整えない | `make lint` の `shfmt -d` |
+| PR のタイトルは Conventional Commits の形にする（下の「commit と PR」） | CI の `pr-title` |
 
 ## commit と PR
 
 - 1 ブランチ 1 PR、squash でマージする。`main` に直接 push しない。
-- **PR のタイトル**が main の commit になり、release-please が次の version と CHANGELOG を決める。Conventional Commits の形で英語で書く（CI が検査する）：`<type>[(scope)][!]: <命令形の 1 文>`。
+- **PR のタイトル**が main の commit になり、release-please が次の version と CHANGELOG を決める。Conventional Commits の形で英語で書く：`<type>[(scope)][!]: <命令形の 1 文>`。
   - `feat`：利用者に届く機能の追加（スキル・サブコマンド・設定項目・hook・スクリプトの機能）→ マイナー
   - `fix`：利用者に届く不具合の修正・手順書の改善 → パッチ
   - `feat!` / `fix!`：`config.yml` のキーや `.tixforge/` の構造が変わり、移行が要る → メジャー
@@ -30,7 +52,7 @@ Claude Code の plugin。構成と開発の手順は README の「tixforge 自�
   - **`skills/`・`references/`・`agents/`・`templates/` の md や yml の変更は `docs` にしない。** 手順書は tixforge の振る舞いそのものなので `feat` か `fix` にする。`docs` にすると利用者に届かない。
 - PR の中の commit は英語。件名は命令形の 1 文、本文に「なぜ」を書く（squash の本文に並ぶ）。
 - 整形だけの変更は単独の PR にし、マージ後の commit を `.git-blame-ignore-revs` に足す。
-- version は手で上げない。release-please のリリース PR（`chore(main): release tixforge x.y.z`）をマージすると、version・CHANGELOG・タグ・GitHub Release・Discord 通知が揃う。
+- **リリース**：利用者に届くのは、`.claude-plugin/plugin.json` の `version` を上げたものだけ。version は手で上げない。main に入るたびに release-please（`.github/workflows/release-please.yml`）がリリース PR（`chore(main): release tixforge x.y.z`）を更新し、それをマージすると version・CHANGELOG・`tixforge--v<version>` のタグ・GitHub Release・Discord 通知が揃う。
 
 ## `.local/`（git の外）
 
