@@ -28,6 +28,7 @@ jobs:
           pipx install zizmor==1.31.1
           go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          go install github.com/editorconfig-checker/editorconfig-checker/v4/cmd/editorconfig-checker@v4.0.2
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - run: make lint
 

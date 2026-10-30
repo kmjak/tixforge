@@ -1,9 +1,10 @@
 # make check: everything CI checks, on this machine. Run it before a PR.
-# Tools: shellcheck, shfmt, actionlint, zizmor, jq (brew install shellcheck
-# shfmt actionlint zizmor jq). The versions CI uses are in
-# .github/workflows/test.yml.
+# Tools: shellcheck, shfmt, actionlint, zizmor, editorconfig-checker, jq
+# (brew install shellcheck shfmt actionlint zizmor editorconfig-checker jq).
+# The versions CI uses are in .github/workflows/test.yml.
 
-SH := $(shell git ls-files '*.sh')
+# Tracked and new (untracked, not ignored) scripts; a deleted one is left out.
+SH := $(wildcard $(shell git ls-files --cached --others --exclude-standard '*.sh'))
 WORKFLOWS := $(wildcard .github/workflows/*.yml) $(wildcard templates/github/*.yml)
 SUITES := guard json-get scripts plugin
 
@@ -16,6 +17,7 @@ lint:
 	shfmt -d $(SH)
 	actionlint $(WORKFLOWS)
 	zizmor --offline --quiet $(WORKFLOWS)
+	editorconfig-checker
 
 fmt:
 	shfmt -w $(SH)
@@ -26,7 +28,7 @@ test:
 # macOS ships bash 3.2 as /bin/bash; the scripts must run in it.
 test-bash32:
 	@if [ "$$(uname)" = Darwin ]; then \
-	  for s in $(SUITES); do /bin/bash tests/$$s.test.sh || exit 1; done; \
+		for s in $(SUITES); do /bin/bash tests/$$s.test.sh || exit 1; done; \
 	else echo "test-bash32: not macOS, skipped (CI runs it on macos-latest)"; fi
 
 validate:

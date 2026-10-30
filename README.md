@@ -157,7 +157,7 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 ## tixforge 自体を開発する
 
 ```sh
-brew install shellcheck shfmt actionlint zizmor jq   # 初回だけ
+brew install shellcheck shfmt actionlint zizmor editorconfig-checker jq   # 初回だけ
 git config blame.ignoreRevsFile .git-blame-ignore-revs   # 初回だけ。整形だけの commit を blame から外す
 claude --plugin-dir .                     # 作業ツリーをそのまま読み込む
 make check                                # PR の前に。lint・テスト・macOS の bash 3.2 でのテスト・claude plugin validate
