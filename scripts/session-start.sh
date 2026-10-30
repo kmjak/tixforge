@@ -17,26 +17,13 @@ cwd=$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\
 top=$(git rev-parse --show-toplevel 2> /dev/null) || exit 0
 branch=$(git symbolic-ref --short -q HEAD 2> /dev/null || true)
 
+# The run on this branch, or the runs before Implement (no branch yet).
+# Remind of it when there is one; with several, the user says which.
+runs=$(current_runs "$top" "$branch")
 run=""
-early=""
-for f in "$(tf_dir "$top")"/*/state.md; do
-  [ -f "$f" ] || continue
-  st=$(field "$f" Status)
-  is_open_status "$st" || continue
-  if [ -n "$branch" ] && [ "$(field "$f" Branch)" = "$branch" ]; then
-    run=$f
-    break
-  fi
-  case "$st" in research:* | approach:* | plan:*) early="${early}${early:+
-}$f" ;; esac
-done
-# Not on a run's branch: a run before Implement has no branch yet. Remind
-# of it when it is the only one; with several, the user says which.
-if [ -z "$run" ] && [ -n "$early" ]; then
-  [ "$(printf '%s\n' "$early" | wc -l)" -eq 1 ] && run=$early
-fi
-if [ -z "$run" ] && [ -n "$early" ]; then
-  ids=$(printf '%s\n' "$early" | while IFS= read -r f; do
+[ -n "$runs" ] && [ "$(printf '%s\n' "$runs" | wc -l)" -eq 1 ] && run=$runs
+if [ -z "$run" ] && [ -n "$runs" ]; then
+  ids=$(printf '%s\n' "$runs" | while IFS= read -r f; do
     d=${f%/state.md}
     printf '%s ' "${d##*/}"
   done)
