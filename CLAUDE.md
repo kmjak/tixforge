@@ -28,5 +28,4 @@ Claude Code の plugin。構成と開発の手順は README の「tixforge 自�
 
 ## `.local/`（git の外）
 
-- `.local/idea/`：方針を決めていない案。`.local/v2/`：今すぐ直すもの。`.local/v3/`：次の大きな版で入れるもの。
 - 検証で見つけた問題は、頼まれない限りコードを直さず `.local/idea/` に書く。消すときはユーザーの承認を得る。
