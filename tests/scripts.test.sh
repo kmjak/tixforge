@@ -672,5 +672,72 @@ has "ci: none" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "no
 pr OPEN MERGEABLE "" '[]' "$ok_check"
 has "ci: success" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "checks detail"
 
+# --- v2 data ---------------------------------------------------------------
+# What v2 left in users' repositories (tests/fixtures/v2): runs started in v2
+# go on after the update, so every script reads them as before.
+section="v2 data"
+v2="$here/fixtures/v2"
+v2repo="$tmp/v2-repo"
+git init -q -b main "$v2repo"
+cd "$v2repo" || exit 1
+git commit -q --allow-empty -m init
+git branch develop
+git branch GT-000102-logout
+mkdir -p .tixforge
+printf '*\n!.gitignore\n!config.yml\n' > .tixforge/.gitignore
+cp "$v2/config-merge.yml" .tixforge/config.yml
+for r in 101:plan 102:implement 103:done; do
+  mkdir -p ".tixforge/GT-000${r%%:*}"
+  printf '# GT-000%s: v2\n\n## 背景\n' "${r%%:*}" > ".tixforge/GT-000${r%%:*}/ticket.md"
+  cp "$v2/state-${r#*:}.md" ".tixforge/GT-000${r%%:*}/state.md"
+done
+
+eq plan:awaiting-approval "$(st get GT-000101)" "get: plan"
+eq implement:in-progress "$(st get GT-000102)" "get: implement"
+eq develop "$(st get GT-000102 Base)" "get: Base"
+eq done "$(st get GT-000103)" "get: done"
+eq "$(printf 'GT-000101\tplan:awaiting-approval\t—\nGT-000102\timplement:in-progress\tGT-000102-logout\nGT-000103\tdone\tGT-000103-signup')" \
+  "$(st list)" "list"
+
+for c in merge release; do
+  cp "$v2/config-$c.yml" .tixforge/config.yml
+  out=$(bash "$scripts/project-status.sh")
+  eq 0 $? "project-status with close_issues: $c"
+  has "base_branch=develop" "$out" "project-status reads the rest of the config ($c)"
+  has "GT-000101: Status plan:awaiting-approval" "$out" "project-status: the run at the Plan gate ($c)"
+  has "GT-000102: Status implement:in-progress" "$out" "project-status: the implementing run ($c)"
+  case "$out" in *GT-000103*) ng "project-status: the done run is not open ($c)" ;; *) ok ;; esac
+  out=$(bash "$scripts/verify.sh")
+  eq 0 $? "verify with close_issues: $c"
+  has "test pass" "$out" "verify runs the commands ($c)"
+done
+
+eq "GT-000101 · plan:awaiting-approval" "$(sl "{\"cwd\":\"$v2repo\"}")" "statusline: the run before Implement"
+git switch -q GT-000102-logout
+eq "GT-000102 · implement:in-progress" "$(sl "{\"cwd\":\"$v2repo\"}")" "statusline: the run on this branch"
+has "run GT-000102" "$(printf '{"source":"compact","cwd":"%s"}' "$v2repo" | bash "$scripts/session-start.sh")" \
+  "session-start: the run on this branch"
+git switch -q main
+
+# rewind: the placeholder comments do not break the sections.
+h=$(st rewind GT-000102 plan --reason v2)
+eq plan:in-progress "$(st get GT-000102)" "rewind sets the Status"
+eq "Research|Approach|Plan|Implementation Log|Review|PR" \
+  "$(sed -n 's/^## //p' .tixforge/GT-000102/state.md | paste -sd'|' -)" "rewind keeps the six sections once each, in order"
+has "ログアウトの要件" "$(cat .tixforge/GT-000102/state.md)" "rewind keeps Research"
+has "セッションを消して" "$(cat .tixforge/GT-000102/state.md)" "rewind keeps Approach"
+case "$(cat .tixforge/GT-000102/state.md)" in *"ログアウトのボタン"* | *abc1234*) ng "rewind moves Plan and the log" ;; *) ok ;; esac
+has "ログアウトのボタン" "$(cat "$h")" "the Plan is in the history"
+st rewind GT-000103 plan 2> /dev/null
+eq 4 $? "a done run is not rewound"
+
+# Issues closed with v2's English comments, with their labels taken off.
+cp "$v2/issue-closed.json" "$GH_DIR/issue-201.json"
+cp "$v2/issue-closed-sync.json" "$GH_DIR/issue-202.json"
+cp "$v2/issue-canceled.json" "$GH_DIR/issue-203.json"
+eq "closed_as: completed" "$(is check 201 | sed -n 2p)" "closed by tixforge"
+eq "closed_as: completed" "$(is check 202 | sed -n 2p)" "closed by tixforge-issue-sync"
+eq "closed_as: canceled" "$(is check 203 | sed -n 2p)" "canceled by tixforge"
+
 echo "scripts: $pass passed, $fail failed"
 [ $fail -eq 0 ]

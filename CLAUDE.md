@@ -40,6 +40,7 @@ make fmt                                  # shfmt で整形（設定は .editorc
 | `skills/`・`references/`・`agents/` でファイルの名前を変えたら、参照している側も直す | `tests/plugin.test.sh` |
 | スクリプトは `make fmt` で整形する。手で整えない | `make lint` の `shfmt -d` |
 | PR のタイトルは Conventional Commits の形にする（下の「commit と PR」） | CI の `pr-title` |
+| v2 が残した state.md・config・issue を読めるままにする（v2 で始めた run を続けられる）。`tests/fixtures/v2/` は直さない | `tests/scripts.test.sh`・`tests/guard.test.sh` の「v2 data」 |
 
 ## commit と PR
 

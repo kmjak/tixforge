@@ -1,0 +1,13 @@
+# tixforge settings (shared, committed)
+language: ja
+commands:
+  test: "true"
+ticket:
+  tracker: github
+repository:
+  host: github
+  base_branch: develop
+  close_issues: merge
+review:
+  required: false
+gates: [approach, plan, pr]

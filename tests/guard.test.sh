@@ -392,5 +392,23 @@ expect_raw pass "$at" MultiEdit "$ti"
 expect_raw ask "$at" Edit '{"file_path":["x"],"old_string":"a","new_string":"b"}'
 set_state implement:in-progress
 
+# v2 data (tests/fixtures/v2): a run started in v2 is guarded as before.
+state="v2 data"
+v2repo="$tmp/v2-repo"
+git init -q -b main "$v2repo"
+git -C "$v2repo" commit -q --allow-empty -m init
+git -C "$v2repo" branch develop
+mkdir -p "$v2repo/.tixforge/GT-000101" "$v2repo/.tixforge/GT-000102"
+printf '*\n!.gitignore\n!config.yml\n' > "$v2repo/.tixforge/.gitignore"
+cp "$here/fixtures/v2/config-release.yml" "$v2repo/.tixforge/config.yml"
+cp "$here/fixtures/v2/state-plan.md" "$v2repo/.tixforge/GT-000101/state.md"
+expect_tool ask "$v2repo" Edit "{\"file_path\":\"$v2repo/src/a.ts\"}"
+cp "$here/fixtures/v2/state-implement.md" "$v2repo/.tixforge/GT-000102/state.md"
+git -C "$v2repo" checkout -q -b GT-000102-logout
+expect_tool pass "$v2repo" Edit "{\"file_path\":\"$v2repo/src/a.ts\"}"
+expect ask "$v2repo" 'git push'
+expect deny "$v2repo" 'git push --force'
+reason_has "$v2repo" 'git push' 'implement:in-progress'
+
 echo "guard: $pass passed, $fail failed"
 [ $fail -eq 0 ]
