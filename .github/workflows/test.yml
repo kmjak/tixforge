@@ -1,42 +1,88 @@
 name: test
 
-# push only on main: a PR's branch is tested by pull_request, so it does not
-# run twice.
+# Every push to main and every PR, whatever it changes: the skills, hooks and
+# manifests are checked too, and "result" (the required check) always runs.
+# push runs only on main: a PR's branch is tested by pull_request.
 on:
   push:
     branches: [main]
-    paths:
-      - "scripts/**"
-      - "templates/**"
-      - "tests/**"
-      - ".github/workflows/test.yml"
   pull_request:
-    paths:
-      - "scripts/**"
-      - "templates/**"
-      - "tests/**"
-      - ".github/workflows/test.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
-    # One job per suite and awk, in parallel; a failing job does not stop the
-    # others. The scripts run in the user's awk: gawk, or mawk (the default
-    # awk of Debian / Ubuntu). macOS awk is checked by running the tests on a
-    # Mac.
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Install the linters
+        run: |
+          pipx install shellcheck-py==0.11.0.1
+          pipx install zizmor==1.31.1
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: make lint
+
+  test:
+    # One job per suite and shell / awk, in parallel; a failing job does not
+    # stop the others. The scripts run in the user's awk and bash: gawk, mawk
+    # (the default awk of Debian / Ubuntu), and macOS's own bash 3.2 and BWK
+    # awk.
     strategy:
       fail-fast: false
       matrix:
-        suite: [guard, scripts, json-get]
-        awk: [gawk, mawk]
+        suite: [guard, scripts, json-get, plugin]
+        env: [gawk, mawk, macos]
+        include:
+          - env: gawk
+            os: ubuntu-latest
+          - env: mawk
+            os: ubuntu-latest
+          - env: macos
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Use ${{ matrix.awk }} as awk
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Put the awk (and on macOS, /bin/bash) under test first on PATH, so the
+      # scripts the tests start use them too.
+      - name: Use ${{ matrix.env }}
+        env:
+          ENV_NAME: ${{ matrix.env }}
         run: |
-          command -v "${{ matrix.awk }}" >/dev/null \
-            || { sudo apt-get update -q && sudo apt-get install -y -q "${{ matrix.awk }}"; }
-          mkdir -p "$RUNNER_TEMP/awk"
-          ln -sf "$(command -v "${{ matrix.awk }}")" "$RUNNER_TEMP/awk/awk"
-          echo "$RUNNER_TEMP/awk" >> "$GITHUB_PATH"
-      - run: readlink -f "$(command -v awk)"; awk -W version 2>&1 | head -1
+          mkdir -p "$RUNNER_TEMP/bin"
+          if [ "$ENV_NAME" = macos ]; then
+            ln -sf /usr/bin/awk "$RUNNER_TEMP/bin/awk"
+            ln -sf /bin/bash "$RUNNER_TEMP/bin/bash"
+          else
+            command -v "$ENV_NAME" > /dev/null \
+              || { sudo apt-get update -q && sudo apt-get install -y -q "$ENV_NAME"; }
+            ln -sf "$(command -v "$ENV_NAME")" "$RUNNER_TEMP/bin/awk"
+          fi
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: |
+          command -v awk bash
+          bash --version | head -1
       - run: bash tests/${{ matrix.suite }}.test.sh
+
+  # The one check to require in the branch rules: it runs even when a job
+  # above fails or is skipped, and passes only when all of them passed.
+  result:
+    if: always()
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
