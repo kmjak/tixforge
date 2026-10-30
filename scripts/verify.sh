@@ -21,8 +21,8 @@ set -uo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
-top=$(flow_top)
-conf=$(flow_config "$top")
+top=$(tf_top)
+conf=$(tf_config "$top")
 
 if ! cfg_has commands "$conf"; then
   echo ".tixforge/config.yml に commands がありません（/tixforge:project init の再実行で追加できます）" >&2

@@ -20,7 +20,7 @@
 #
 # Precedence: merged > closed > conflict > ci_failing > changes_requested > approved > ready > pending
 #
-# FLOW_PR_JSON=<file> reads the `gh pr view --json` output from a file
+# TF_PR_JSON=<file> reads the `gh pr view --json` output from a file
 # instead of calling gh (for tests).
 set -euo pipefail
 
@@ -76,8 +76,8 @@ filter='
       "commented_by: \($commenters | join(", "))"
   '
 
-if [ -n "${FLOW_PR_JSON:-}" ]; then
-  jq -r "$filter" "$FLOW_PR_JSON"
+if [ -n "${TF_PR_JSON:-}" ]; then
+  jq -r "$filter" "$TF_PR_JSON"
 else
   gh pr view "$1" \
     --json url,state,isDraft,mergeable,reviewDecision,latestReviews,statusCheckRollup \

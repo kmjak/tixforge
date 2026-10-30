@@ -65,7 +65,7 @@ eq ja "$(cfg language)" "top-level scalar with comment"
 eq local "$(cfg ticket.tracker)" "nested scalar"
 eq false "$(cfg review.required)" "review.required"
 eq "" "$(cfg ticket.nothing)" "missing key"
-eq "approach,plan,pr" "$(cfg_list gates | paste -sd, -)" "flow list"
+eq "approach,plan,pr" "$(cfg_list gates | paste -sd, -)" "cfg_list"
 printf 'gates:\n  - plan\n  - pr\n' > "$tmp/block.yml"
 eq "plan,pr" "$(cfg_list gates "$tmp/block.yml" | paste -sd, -)" "block list"
 eq "test,lint" "$(cfg_map commands | cut -f1 | paste -sd, -)" "command keys in order"
@@ -629,49 +629,9 @@ ln -s "$(command -v bash)" "$nogh/bash"
 PATH="$nogh" "$nogh/bash" "$scripts/github-preflight.sh" > /dev/null
 eq 3 $? "no gh"
 
-# --- migrate-from-flow.sh ---------------------------------------------------
-section="migrate-from-flow.sh"
-old="$tmp/oldflow"
-git init -q -b main "$old"
-(
-  cd "$old" || exit 1
-  mkdir -p docs/tickets docs/flow/T000003 docs/flow/T000007 .github/workflows .github/flow
-  printf '# /flow settings (shared, committed)\nlanguage: ja\nticket:\n  tracker: github\n  prefix: T\n  pad: 6\nrepository:\n  host: github\n  default_branch: develop\n' > docs/flow.config.yml
-  printf '# T000003: ローカル\n\nStatus: canceled\nReason: やめた\n\n## 背景\nlocal\n' > docs/tickets/T000003.md
-  printf '# T000042: 連携\n\nIssue: #42\n\n## 背景\ngithub\n' > docs/tickets/T000042.md
-  printf '# Flow: T000007\n\n| Field   | Value |\n|---------|-------|\n| Status  | plan:in-progress |\n| Ticket  | docs/tickets/T000007.md |\n| Issue   | — |\n| Branch  | T000007-x |\n| Base    | main |\n| Updated | 2026-01-01 00:00 |\n\n## Plan\nkeep me\n' > docs/flow/T000007/main.md
-  echo T000007 > docs/flow/.active
-  printf 'name: flow-issue-sync\n' > .github/workflows/flow-issue-sync.yml
-  printf '# flow-command template: flow-ci (v1).\nname: flow-ci\non: push\n' > .github/workflows/flow-ci.yml
-  echo old > .github/flow/ticket-hash.sh
-  printf 'docs/flow/\n' > .gitignore
-  git add docs/flow.config.yml docs/tickets/T000003.md .github .gitignore && git commit -q -m old
-)
-out=$(cd "$old" && bash "$scripts/migrate-from-flow.sh")
-has "(dry-run)" "$out" "dry run by default"
-[ -f "$old/docs/flow.config.yml" ] && [ ! -d "$old/.tixforge/LT-000003" ] && ok || ng "dry run changes nothing"
-(cd "$old" && bash "$scripts/migrate-from-flow.sh" --apply > /dev/null)
-eq develop "$(cfg repository.base_branch "$old/.tixforge/config.yml")" "default_branch becomes base_branch"
-eq "" "$(cfg ticket.prefix "$old/.tixforge/config.yml")" "prefix is dropped"
-eq "# LT-000003: ローカル" "$(sed -n 1p "$old/.tixforge/LT-000003/ticket.md")" "a local ticket becomes LT-"
-has "Status: canceled" "$(cat "$old/.tixforge/LT-000003/ticket.md")" "a local ticket keeps its cancel lines"
-eq "# GT-000042: 連携" "$(sed -n 1p "$old/.tixforge/GT-000042/ticket.md")" "a ticket with an issue becomes GT-"
-eq 0 "$(grep -c '^Issue:' "$old/.tixforge/GT-000042/ticket.md")" "the Issue line is dropped"
-eq "# Run: LT-000007" "$(sed -n 1p "$old/.tixforge/LT-000007/state.md")" "a run moves to state.md"
-eq 0 "$(grep -c '^| Ticket\|^| Issue' "$old/.tixforge/LT-000007/state.md")" "Ticket and Issue rows are dropped"
-eq T000007-x "$(field "$old/.tixforge/LT-000007/state.md" Branch)" "the branch of a run is kept"
-has "keep me" "$(cat "$old/.tixforge/LT-000007/state.md")" "sections are kept"
-[ -e "$old/docs/flow" ] || [ -e "$old/docs/tickets" ] && ng "docs/flow and docs/tickets are gone" || ok
-[ -f "$old/.github/workflows/tixforge-issue-sync.yml" ] && [ ! -e "$old/.github/workflows/flow-issue-sync.yml" ] && ok || ng "workflow replaced"
-has "name: tixforge-ci" "$(cat "$old/.github/workflows/tixforge-ci.yml")" "the CI workflow is renamed"
-has "tixforge:ticket:start" "$(cat "$old/.github/tixforge/ticket-hash.sh")" ".github/tixforge has the new hash script"
-eq "" "$(cd "$old" && git status --porcelain --untracked-files=all .tixforge | grep -v '.gitignore\|config.yml')" "tickets and runs stay out of git"
-(cd "$old" && bash "$scripts/migrate-from-flow.sh" > /dev/null 2>&1)
-eq 3 $? "nothing left to migrate"
-
 # --- pr-status.sh ----------------------------------------------------------
 section="pr-status.sh"
-prs() { FLOW_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x | sed -n 1p; }
+prs() { TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x | sed -n 1p; }
 # pr <state> <mergeable> <reviewDecision> <latestReviews-json> <checks-json>
 pr() {
   jq -n --arg s "$1" --arg m "$2" --arg d "$3" --argjson r "$4" --argjson c "$5" \
@@ -705,12 +665,12 @@ eq pending "$(prs)" "mergeability unknown"
 pr OPEN MERGEABLE APPROVED "$approved" "$ok_check"
 jq '.isDraft = true' "$tmp/pr.json" > "$tmp/pr2.json" && mv "$tmp/pr2.json" "$tmp/pr.json"
 eq pending "$(prs)" "draft"
-has "draft: true" "$(FLOW_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "draft detail"
+has "draft: true" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "draft detail"
 # No check at all is reported as such, so the caller can tell it from success.
 pr OPEN MERGEABLE "" '[]' '[]'
-has "ci: none" "$(FLOW_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "no checks detail"
+has "ci: none" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "no checks detail"
 pr OPEN MERGEABLE "" '[]' "$ok_check"
-has "ci: success" "$(FLOW_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "checks detail"
+has "ci: success" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "checks detail"
 
 echo "scripts: $pass passed, $fail failed"
 [ $fail -eq 0 ]

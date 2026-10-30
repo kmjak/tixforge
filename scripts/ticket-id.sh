@@ -116,7 +116,7 @@ case $cmd in
     ;;
   next)
     [ $# -eq 0 ] || usage
-    top=$(flow_top)
+    top=$(tf_top)
     max=$(
       {
         ls "$(tf_dir "$top")" 2> /dev/null
