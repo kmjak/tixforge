@@ -2,11 +2,13 @@ name: test
 
 # Every push to main and every PR, whatever it changes: the skills, hooks and
 # manifests are checked too, and "result" (the required check) always runs.
-# push runs only on main: a PR's branch is tested by pull_request.
+# push runs only on main: a PR's branch is tested by pull_request. "edited"
+# re-checks a PR whose title changed.
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
@@ -16,6 +18,32 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # PRs are squash-merged and the title becomes the commit release-please
+  # reads, so it must be a Conventional Commit (see CLAUDE.md).
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$TITLE" \
+            | grep -Eq '^(feat|fix|perf|refactor|docs|test|ci|build|chore|revert)(\([a-z0-9-]+\))?!?: .+' \
+            || { echo "::error::PR title is not a Conventional Commit (e.g. 'fix: ...', 'feat(dev): ...'): $TITLE"; exit 1; }
+
+  # Only on the release PR: the version tag must not exist yet, and
+  # plugin.json and the marketplace entry must agree.
+  plugin-tag:
+    if: startsWith(github.head_ref, 'release-please--')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: npm install -g @anthropic-ai/claude-code@2.1.314 # zizmor: ignore[adhoc-packages] the version is fixed
+      - run: claude plugin tag --dry-run .
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -76,14 +104,14 @@ jobs:
       - run: bash tests/${{ matrix.suite }}.test.sh
 
   # The one check to require in the branch rules: it runs even when a job
-  # above fails or is skipped, and passes only when all of them passed.
+  # above fails, and passes only when each one passed or did not apply.
   result:
     if: always()
-    needs: [lint, test]
+    needs: [pr-title, plugin-tag, lint, test]
     runs-on: ubuntu-latest
     steps:
       - env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "$RESULTS"
-          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
+          for r in $RESULTS; do case "$r" in success | skipped) ;; *) exit 1 ;; esac; done

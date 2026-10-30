@@ -195,7 +195,7 @@ make fmt                                  # shfmt で整形（設定は .editorc
 - `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
 - 結果が 1 つに決まる処理は `scripts/` に置き、テストで確かめる（gh はスタブに置き換える。`scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、guard が hook の入力を読む `json_get` を jq の結果とも突き合わせる）。
 - スクリプトの中で、`$var` の直後に全角文字を続けない（`${var}` と書く）。テストが検出する。
-- **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。上げた commit が `main` に入ると、`tixforge--v<version>` のタグと GitHub Release が作られ、Discord に通知される。どちらにも前の版からマージされた PR の一覧が載る（`.github/workflows/release.yml`）。
+- **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。version は release-please が管理する（`.github/workflows/release-please.yml`）。PR は squash でマージし、タイトルを Conventional Commits（`feat:`・`fix:` など）で書く。main に入るたびに、次の version と `CHANGELOG.md` を書き換えるリリース PR が更新され、それをマージすると `tixforge--v<version>` のタグ・GitHub Release・Discord 通知ができる。種類の選び方は `CLAUDE.md`。
 - **テンプレート**：`templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` はこれで更新の有無を判断する。
 
 ## License

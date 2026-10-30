@@ -1,0 +1,54 @@
+# Releases with release-please. Every push to main updates the release PR
+# (the next version in .claude-plugin/plugin.json and CHANGELOG.md, from the
+# Conventional Commits titles of the merged PRs). Merging that PR makes the
+# tixforge--v<version> tag and the GitHub Release, then notifies Discord.
+#
+# RELEASE_TOKEN is a fine-grained token (this repository: Contents and Pull
+# requests, read and write): a PR made with GITHUB_TOKEN would start no
+# workflow, so the required "result" check would never come.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  notify:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Build the message
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: bash .github/scripts/discord-payload.sh "$TAG" > "$RUNNER_TEMP/payload.json"
+      - name: Notify Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          curl -sS --fail-with-body -H "Content-Type: application/json" -d @"$RUNNER_TEMP/payload.json" "$WEBHOOK"
