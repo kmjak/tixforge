@@ -167,21 +167,7 @@ tf=$(printf '%s' "$input" | bash ~/.claude/plugins/marketplaces/tixforge/scripts
 
 ## tixforge 自体を開発する
 
-```sh
-brew install shellcheck shfmt actionlint zizmor editorconfig-checker jq   # 初回だけ
-git config blame.ignoreRevsFile .git-blame-ignore-revs   # 初回だけ。整形だけの commit を blame から外す
-claude --plugin-dir .                     # 作業ツリーをそのまま読み込む
-make check                                # PR の前に。lint・テスト・macOS の bash 3.2 でのテスト・claude plugin validate
-make fmt                                  # shfmt で整形（設定は .editorconfig）
-```
-
-- CI（`.github/workflows/test.yml`）は、どの変更でも lint と 4 つのテストを、gawk・mawk・macOS（bash 3.2 と BWK awk）で回す。ブランチルールで必須にするのは `result` だけ。
-
-- `skills/<名前>/SKILL.md` が起動時に読まれ、共通規約（`references/common.md`）を `scripts/common-rules.sh` で差し込む。手順は `skills/<名前>/*.md` と `references/github/*.md` に分け、使う場面で読む。
-- 結果が 1 つに決まる処理は `scripts/` に置き、テストで確かめる（gh はスタブに置き換える。`scripts.test.sh` には jq が要る。`json-get.test.sh` は jq があれば、guard が hook の入力を読む `json_get` を jq の結果とも突き合わせる）。
-- スクリプトの中で、`$var` の直後に全角文字を続けない（`${var}` と書く）。テストが検出する。
-- **リリース**：`.claude-plugin/plugin.json` の `version` を上げたものが、利用者に届く新しい版になる。version は release-please が管理する（`.github/workflows/release-please.yml`）。PR は squash でマージし、タイトルを Conventional Commits（`feat:`・`fix:` など）で書く。main に入るたびに、次の version と `CHANGELOG.md` を書き換えるリリース PR が更新され、それをマージすると `tixforge--v<version>` のタグ・GitHub Release・Discord 通知ができる。種類の選び方は `CLAUDE.md`。
-- **テンプレート**：`templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` はこれで更新の有無を判断する。
+準備・構成・ルールは [CLAUDE.md](CLAUDE.md) にある。
 
 ## License
 
