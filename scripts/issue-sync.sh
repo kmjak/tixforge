@@ -33,17 +33,21 @@
 #       fetched, 6 the ticket folder already exists (create), other: gh failed.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$here/lib.sh"
 hash_sh="$here/ticket-hash.sh"
 
-usage() { grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2; exit 2; }
+usage() {
+  grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2
+  exit 2
+}
 
 OUT_OF_SYNC=tixforge:out-of-sync
 
 # --- ticket file ------------------------------------------------------------
 
 ticket_title() { sed -n '1{s/^# *//; s/^[^:]*: *//; p;}' "$1"; }
-ticket_body() { awk '/^## / { on = 1 } on' "$1"; }                  # first ## to the end
+ticket_body() { awk '/^## / { on = 1 } on' "$1"; } # first ## to the end
 
 notice() { printf '%b\n' "$(msg issue_notice)"; }
 
@@ -79,33 +83,50 @@ load() {
 # verdict: of the loaded issue.
 verdict() {
   local stored
-  bash "$hash_sh" extract < "$tmpd/body" > "$tmpd/ticket" || { echo no-markers; return; }
-  stored=$(bash "$hash_sh" stored < "$tmpd/body") || { echo no-hash; return; }
+  bash "$hash_sh" extract < "$tmpd/body" > "$tmpd/ticket" || {
+    echo no-markers
+    return
+  }
+  stored=$(bash "$hash_sh" stored < "$tmpd/body") || {
+    echo no-hash
+    return
+  }
   if [ "$(bash "$hash_sh" hash "$title" < "$tmpd/ticket")" = "$stored" ]; then echo in-sync; else echo edited; fi
 }
 
-stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2>/dev/null || true; }
+stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2> /dev/null || true; }
 
-has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
+has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 
 # closed_as <number>: how the loaded issue ended. Labels first (tixforge and
 # its Actions set them), then what GitHub recorded: a merged PR or a commit
 # with a closing keyword closed it (completed), or tixforge canceled it.
 closed_as() {
-  [ "$state" = CLOSED ] || { echo open; return; }
-  if has_label tixforge:done || has_label tixforge:merged; then echo completed; return; fi
-  if has_label tixforge:canceled; then echo canceled; return; fi
+  [ "$state" = CLOSED ] || {
+    echo open
+    return
+  }
+  if has_label tixforge:done || has_label tixforge:merged; then
+    echo completed
+    return
+  fi
+  if has_label tixforge:canceled; then
+    echo canceled
+    return
+  fi
   local comments by_pr by_commit
-  comments=$(gh issue view "$1" --json comments --jq '[.comments[].body | split("\n")[0]] | join("\n")' 2>/dev/null || true)
+  comments=$(gh issue view "$1" --json comments --jq '[.comments[].body | split("\n")[0]] | join("\n")' 2> /dev/null || true)
   if [ "$reason" = NOT_PLANNED ] && printf '%s\n' "$comments" | grep -q '^Canceled by tixforge: '; then
-    echo canceled; return
+    echo canceled
+    return
   fi
   if [ "$reason" = COMPLETED ]; then
-    by_pr=$(gh issue view "$1" --json closedByPullRequestsReferences --jq '.closedByPullRequestsReferences | length' 2>/dev/null || echo 0)
+    by_pr=$(gh issue view "$1" --json closedByPullRequestsReferences --jq '.closedByPullRequestsReferences | length' 2> /dev/null || echo 0)
     by_commit=$(gh api "repos/{owner}/{repo}/issues/$1/events" \
-      --jq '[.[] | select(.event == "closed")] | last | .commit_id // ""' 2>/dev/null || true)
+      --jq '[.[] | select(.event == "closed")] | last | .commit_id // ""' 2> /dev/null || true)
     if [ "${by_pr:-0}" != 0 ] || [ -n "$by_commit" ] || printf '%s\n' "$comments" | grep -q '^Closed by tixforge'; then
-      echo completed; return
+      echo completed
+      return
     fi
   fi
   echo unexpected
@@ -115,10 +136,14 @@ hashfile() { printf '%s/.issue-hash\n' "$(dirname "$1")"; }
 
 # write_copy <file> <id> <title> <ticket-body-file>
 write_copy() {
-  { printf '# %s: %s\n\n' "$2" "$3"; cat "$4"; } > "$1"
+  {
+    printf '# %s: %s\n\n' "$2" "$3"
+    cat "$4"
+  } > "$1"
 }
 
-cmd=${1:-}; [ $# -gt 0 ] && shift
+cmd=${1:-}
+[ $# -gt 0 ] && shift
 case $cmd in
   body)
     [ $# -eq 1 ] || usage
@@ -143,7 +168,8 @@ case $cmd in
       echo "the folder of $id already exists: $(dirname "$file")（手元のコピーは作っていない）" >&2
       exit 6
     fi
-    ensure_workspace; mkdir -p "$(dirname "$file")"
+    ensure_workspace
+    mkdir -p "$(dirname "$file")"
     write_copy "$file" "$id" "$t" "$tmpd/ticket"
     bash "$hash_sh" hash "$t" < "$tmpd/ticket" > "$(hashfile "$file")"
     echo "file: ${file#$(flow_top)/}"
@@ -175,21 +201,34 @@ case $cmd in
 
   pull)
     [ $# -ge 2 ] || usage
-    n=$1 file=$2 accept="" dry=""; shift 2
+    n=$1 file=$2 accept="" dry=""
+    shift 2
     for a in "$@"; do
       case $a in --accept-edited) accept=1 ;; --dry-run) dry=1 ;; *) usage ;; esac
     done
     load "$n"
     v=$(verdict)
     case $v in
-      no-markers) echo "no-markers: issue #$n の本文に tixforge の目印がありません" >&2; exit 3 ;;
-      edited) [ -n "$accept" ] || { echo "edited: issue #$n は GitHub 上で直接編集されています" >&2; exit 4; } ;;
+      no-markers)
+        echo "no-markers: issue #$n の本文に tixforge の目印がありません" >&2
+        exit 3
+        ;;
+      edited) [ -n "$accept" ] || {
+        echo "edited: issue #$n は GitHub 上で直接編集されています" >&2
+        exit 4
+      } ;;
     esac
-    id="GT-$(printf '%06d' "$n")"   # issue #42 is GT-000042
+    id="GT-$(printf '%06d' "$n")" # issue #42 is GT-000042
     write_copy "$tmpd/new" "$id" "$title" "$tmpd/ticket"
     if [ ! -f "$file" ]; then
-      if [ -n "$dry" ]; then echo "would create: $file"; cat "$tmpd/new"; exit 0; fi
-      ensure_workspace; mkdir -p "$(dirname "$file")"; cat "$tmpd/new" > "$file"
+      if [ -n "$dry" ]; then
+        echo "would create: $file"
+        cat "$tmpd/new"
+        exit 0
+      fi
+      ensure_workspace
+      mkdir -p "$(dirname "$file")"
+      cat "$tmpd/new" > "$file"
       echo "created: $file"
     elif cmp -s "$file" "$tmpd/new"; then
       echo "unchanged: $file"
@@ -202,15 +241,22 @@ case $cmd in
 
   push)
     [ $# -ge 2 ] || usage
-    n=$1 file=$2 force="" keep=""; shift 2
+    n=$1 file=$2 force="" keep=""
+    shift 2
     for a in "$@"; do
       case $a in --force) force=1 ;; --keep-original) keep=1 ;; *) usage ;; esac
     done
     load "$n"
     v=$(verdict)
     case $v in
-      no-markers) [ -n "$force" ] || { echo "no-markers: issue #$n の本文に tixforge の目印がありません（--force で上書き）" >&2; exit 3; } ;;
-      edited) [ -n "$force" ] || { echo "edited: issue #$n は GitHub 上で直接編集されています（--force で上書き）" >&2; exit 4; } ;;
+      no-markers) [ -n "$force" ] || {
+        echo "no-markers: issue #$n の本文に tixforge の目印がありません（--force で上書き）" >&2
+        exit 3
+      } ;;
+      edited) [ -n "$force" ] || {
+        echo "edited: issue #$n は GitHub 上で直接編集されています（--force で上書き）" >&2
+        exit 4
+      } ;;
     esac
     # Optimistic lock: the issue must still be the version this copy came from.
     if [ -z "$force" ] && [ -f "$(hashfile "$file")" ] && [ "$(cat "$(hashfile "$file")")" != "$(stored_hash)" ]; then
@@ -224,16 +270,19 @@ case $cmd in
       echo "unchanged: #$n"
     else
       if [ -n "$keep" ]; then
-        { printf '%s\n\n' "$(msg original_body_comment)"; cat "$tmpd/body"; } > "$tmpd/original"
-        gh issue comment "$n" --body-file "$tmpd/original" >/dev/null || exit $?
+        {
+          printf '%s\n\n' "$(msg original_body_comment)"
+          cat "$tmpd/body"
+        } > "$tmpd/original"
+        gh issue comment "$n" --body-file "$tmpd/original" > /dev/null || exit $?
         echo "commented: the original body of #$n"
       fi
-      gh issue edit "$n" --title "$t" --body-file "$tmpd/new" >/dev/null || exit $?
+      gh issue edit "$n" --title "$t" --body-file "$tmpd/new" > /dev/null || exit $?
       echo "updated: #$n"
     fi
     bash "$hash_sh" hash "$t" < "$tmpd/local" > "$(hashfile "$file")"
     if has_label "$OUT_OF_SYNC"; then
-      gh issue edit "$n" --remove-label "$OUT_OF_SYNC" >/dev/null && echo "removed label: $OUT_OF_SYNC"
+      gh issue edit "$n" --remove-label "$OUT_OF_SYNC" > /dev/null && echo "removed label: $OUT_OF_SYNC"
     fi
     ;;
 
@@ -245,15 +294,23 @@ case $cmd in
     [ $# -eq 2 ] || usage
     n=$1 file=$2
     load "$n"
-    [ "$(verdict)" = no-markers ] || { echo "issue #$n は tixforge の形式です（adopt ではなく pull を使う）" >&2; exit 2; }
+    [ "$(verdict)" = no-markers ] || {
+      echo "issue #$n は tixforge の形式です（adopt ではなく pull を使う）" >&2
+      exit 2
+    }
     id="GT-$(printf '%06d' "$n")"
     tr -d '\r' < "$tmpd/body" | awk '
       /^###? / { sub(/^#+ /, "## "); on = 1 }
       on { if ($0 == "_No response_") $0 = "なし"; print }' > "$tmpd/ticket"
     if [ ! -s "$tmpd/ticket" ]; then
-      { printf '## 背景\n'; cat "$tmpd/body"; printf '\n'; } > "$tmpd/ticket"
+      {
+        printf '## 背景\n'
+        cat "$tmpd/body"
+        printf '\n'
+      } > "$tmpd/ticket"
     fi
-    ensure_workspace; mkdir -p "$(dirname "$file")"
+    ensure_workspace
+    mkdir -p "$(dirname "$file")"
     write_copy "$file" "$id" "$title" "$tmpd/ticket"
     echo "adopted: $file (#$n)"
     cat "$file"

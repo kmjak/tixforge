@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 脆弱性の報告（非公開）
+    url: https://github.com/kmjak/tixforge/security/advisories/new
+    about: guard のすり抜けなど、セキュリティに関わる問題はこちらから。公開の issue には書かないでください。

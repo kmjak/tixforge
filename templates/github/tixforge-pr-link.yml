@@ -1,4 +1,4 @@
-# tixforge template: tixforge-pr-link (v3). Installed by /tixforge:project init.
+# tixforge template: tixforge-pr-link (v4). Installed by /tixforge:project init.
 # A server-side check that a pull request from a tixforge branch closes its
 # ticket's issue. The local guard hook can be bypassed; this cannot, once
 # the check is required in branch protection.
@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/tixforge/messages.yml
             .tixforge/config.yml

@@ -18,7 +18,10 @@
 #       (start without --force), other: gh failed.
 set -uo pipefail
 
-usage() { grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2; exit 2; }
+usage() {
+  grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2
+  exit 2
+}
 
 STATUS_LABELS="tixforge:todo tixforge:in-progress tixforge:in-review tixforge:merged tixforge:done tixforge:canceled"
 
@@ -40,9 +43,9 @@ if [ "${1:-}" = setup ]; then
   made=""
   while IFS="$(printf '\t')" read -r name color desc; do
     printf '%s\n' "$have" | grep -qx "$name" && continue
-    gh label create "$name" --color "$color" --description "$desc" >/dev/null || exit $?
+    gh label create "$name" --color "$color" --description "$desc" > /dev/null || exit $?
     made="$made $name"
-  done <<EOF
+  done << EOF
 $(label_defs)
 EOF
   if [ -n "$made" ]; then echo "created labels:$made"; else echo "labels: all present"; fi
@@ -69,12 +72,16 @@ labels=$(printf '%s\n' "$info" | sed -n 2p)
 assignees=$(printf '%s\n' "$info" | sed -n 3p)
 
 case $action in
-  start|review|reset)
-    [ "$state" = OPEN ] || { echo "issue #$n は閉じています（開き直さない）" >&2; exit 3; } ;;
+  start | review | reset)
+    [ "$state" = OPEN ] || {
+      echo "issue #$n は閉じています（開き直さない）" >&2
+      exit 3
+    }
+    ;;
 esac
 
 me=""
-case $action in start|reset) me=$(gh api user --jq .login) || exit $? ;; esac
+case $action in start | reset) me=$(gh api user --jq .login) || exit $? ;; esac
 
 if [ "$action" = start ] && [ -z "$force" ]; then
   others=$(printf '%s' "$assignees" | tr ',' '\n' | grep -vx "$me" | paste -sd, -)
@@ -92,10 +99,17 @@ done
 args="$args --add-label $want"
 note="#$n を $want に"
 case $action in
-  start) args="$args --add-assignee @me"; note="${note}し、assignee に自分を追加" ;;
-  reset) case ",$assignees," in *",$me,"*) args="$args --remove-assignee @me"; note="${note}し、assignee から自分を外した" ;; esac ;;
+  start)
+    args="$args --add-assignee @me"
+    note="${note}し、assignee に自分を追加"
+    ;;
+  reset) case ",$assignees," in *",$me,"*)
+    args="$args --remove-assignee @me"
+    note="${note}し、assignee から自分を外した"
+    ;;
+  esac ;;
 esac
 
 # shellcheck disable=SC2086 # $args is a list of flags without spaces in values
-gh issue edit "$n" $args >/dev/null || exit $?
+gh issue edit "$n" $args > /dev/null || exit $?
 echo "$note"

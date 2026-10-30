@@ -1,0 +1,10 @@
+rules:
+  # The templates are copied into users' repositories, where their own
+  # Dependabot can bump the actions; a pinned hash would be reset by every
+  # /tixforge:project update. This repository's workflows are pinned.
+  unpinned-uses:
+    ignore:
+      - tixforge-ci.yml
+      - tixforge-issue-guard.yml
+      - tixforge-issue-sync.yml
+      - tixforge-pr-link.yml

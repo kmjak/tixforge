@@ -1,0 +1,5 @@
+# make lint runs shellcheck -S warning on every *.sh.
+external-sources=true
+# "done" is a status the scripts pass as an argument (set_state done), not
+# the keyword.
+disable=SC1010

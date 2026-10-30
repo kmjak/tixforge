@@ -29,6 +29,7 @@
 # exit 2 = deny; stderr goes to Claude. JSON on stdout = ask; the reason
 # goes to the user only.
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 input=$(cat)
@@ -36,8 +37,8 @@ tool=$(printf '%s' "$input" | json_get tool_name)
 
 # Cheap pre-filters: most calls never reach git.
 case "$tool" in
-  Bash|'') case "$input" in *git*|*gh*) ;; *) exit 0 ;; esac ;;
-  Edit|Write|MultiEdit|NotebookEdit|mcp__*) ;;
+  Bash | '') case "$input" in *git* | *gh*) ;; *) exit 0 ;; esac ;;
+  Edit | Write | MultiEdit | NotebookEdit | mcp__*) ;;
   *) exit 0 ;;
 esac
 case "$tool" in mcp__*) case "$tool" in *[Gg][Ii][Tt]*) ;; *) exit 0 ;; esac ;; esac
@@ -61,21 +62,26 @@ cwd=$PWD
 c=$(printf '%s' "$input" | json_get cwd)
 [ -n "$c" ] && cwd=$c
 
-top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
+top=$(git -C "$cwd" rev-parse --show-toplevel 2> /dev/null) || exit 0
 
 # --- Edit / Write before the Plan is approved ------------------------------
 
 case "$tool" in
-  Edit|Write|MultiEdit|NotebookEdit)
-    early=""; cur=$(git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null || true)
+  Edit | Write | MultiEdit | NotebookEdit)
+    early=""
+    cur=$(git -C "$cwd" symbolic-ref --short -q HEAD 2> /dev/null || true)
     for f in "$(tf_dir "$top")"/*/state.md; do
       [ -f "$f" ] || continue
       s=$(field "$f" Status)
       case "$s" in
-        research:*|approach:*|plan:*)
-          id=${f%/state.md}; id=${id##*/}; early="${early}${early:+、}${id}（${s}）" ;;
-        implement:*|review:*|pr:*)
-          [ -n "$cur" ] && [ "$(field "$f" Branch)" = "$cur" ] && exit 0 ;;
+        research:* | approach:* | plan:*)
+          id=${f%/state.md}
+          id=${id##*/}
+          early="${early}${early:+、}${id}（${s}）"
+          ;;
+        implement:* | review:* | pr:*)
+          [ -n "$cur" ] && [ "$(field "$f" Branch)" = "$cur" ] && exit 0
+          ;;
       esac
     done
     [ -n "$early" ] || exit 0
@@ -85,24 +91,34 @@ case "$tool" in
     case "$path" in /*) ;; *) path="$cwd/$path" ;; esac
     # Resolve symlinks (/tmp, /var on macOS) through the nearest existing
     # directory, as git does for the toplevel; the file may not exist yet.
-    d=$path; tail=""
-    while [ ! -d "$d" ]; do tail="/${d##*/}$tail"; d=${d%/*}; [ -n "$d" ] || d=/; done
+    d=$path
+    tail=""
+    while [ ! -d "$d" ]; do
+      tail="/${d##*/}$tail"
+      d=${d%/*}
+      [ -n "$d" ] || d=/
+    done
     path="$(cd "$d" && pwd -P)$tail"
     case "$path" in
-      "$top"/docs/*|"$top"/.tixforge/*) exit 0 ;;
+      "$top"/docs/* | "$top"/.tixforge/*) exit 0 ;;
       "$top"/*) ask "Plan の承認前の run があります：${early}。docs/・.tixforge/ 以外のファイル（${path#$top/}）を編集しようとしています。tixforge と無関係の作業なら許可してください。" ;;
       *) exit 0 ;;
-    esac ;;
+    esac
+    ;;
 esac
 
 # --- the run this branch belongs to ----------------------------------------
 
-branch=$(git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null) || exit 0
+branch=$(git -C "$cwd" symbolic-ref --short -q HEAD 2> /dev/null) || exit 0
 
-state=""; base_of=""
+state=""
+base_of=""
 for f in "$(tf_dir "$top")"/*/state.md; do
   [ -f "$f" ] || continue
-  if [ "$(field "$f" Branch)" = "$branch" ]; then state=$f; break; fi
+  if [ "$(field "$f" Branch)" = "$branch" ]; then
+    state=$f
+    break
+  fi
   if [ -z "$base_of" ] && is_open_status "$(field "$f" Status)" && [ "$(field "$f" Base)" = "$branch" ]; then
     base_of=$f
   fi
@@ -114,7 +130,8 @@ if [ -n "$state" ]; then
   base=$(field "$state" Base)
   where="ブランチ ${branch}、Status ${status}（${state#$top/}）"
 else
-  run=${base_of%/state.md}; run=${run##*/}
+  run=${base_of%/state.md}
+  run=${run##*/}
   where="Base ブランチ ${branch}（進行中の run ${run} の Base）"
 fi
 
@@ -123,8 +140,9 @@ fi
 case "$tool" in
   mcp__*)
     verb=${tool##*__}
-    case "$verb" in get*|list*|search*|read*|view*|fetch*) exit 0 ;; esac
-    ask "MCP の ${tool} は git / GitHub への書き込みの可能性があります。${where}。許可しますか？" ;;
+    case "$verb" in get* | list* | search* | read* | view* | fetch*) exit 0 ;; esac
+    ask "MCP の ${tool} は git / GitHub への書き込みの可能性があります。${where}。許可しますか？"
+    ;;
 esac
 
 # --- Bash ------------------------------------------------------------------
@@ -147,13 +165,21 @@ unquoted=$(printf '%s\n' "$cmd" | tr -d "\"'\\\\")
 norm=$(printf '%s\n' "$unquoted" | sed -E 's/stash[[:space:]]+push//g')
 has_word() { printf '%s\n' "$norm" | grep -Eq "(^|[^[:alnum:]_-])$1([^[:alnum:]_-]|$)"; }
 
-is_pr_create=0; precise_pr=0
-printf '%s\n' "$cmd" | grep -Eq "$gh_pr_create_re" && { is_pr_create=1; precise_pr=1; }
+is_pr_create=0
+precise_pr=0
+printf '%s\n' "$cmd" | grep -Eq "$gh_pr_create_re" && {
+  is_pr_create=1
+  precise_pr=1
+}
 if has_word gh && { { has_word pr && has_word create; } || { has_word api && has_word pulls; }; }; then
   is_pr_create=1
 fi
-is_push=0; precise_push=0
-printf '%s\n' "$cmd" | grep -Eq "$git_push_re" && { is_push=1; precise_push=1; }
+is_push=0
+precise_push=0
+printf '%s\n' "$cmd" | grep -Eq "$git_push_re" && {
+  is_push=1
+  precise_push=1
+}
 has_word git && has_word push && is_push=1
 
 # Allow list: every git / gh in command position must be a read or a local,
@@ -164,13 +190,17 @@ has_arg() { # has_arg <pattern>...: one of the remaining words matches
   for w in $rest; do for p in "$@"; do
     # shellcheck disable=SC2254 # $p is a pattern on purpose
     case "$w" in $p) return 0 ;; esac
-  done; done
+  done done
   return 1
 }
 git_ok() { # git_ok <sub>
   case "$1" in
-    ''|push|status|diff|log|show|rev-parse|symbolic-ref|ls-files|ls-tree|ls-remote|check-ignore|merge-base|merge-tree|add|rm|mv|blame|grep|describe|cat-file|for-each-ref|rev-list|shortlog|name-rev|show-ref|diff-tree|diff-files|diff-index|help|version|--version) return 0 ;;
-    commit) [ -z "$state" ] && return 1; has_arg --amend && return 1; return 0 ;;
+    '' | push | status | diff | log | show | rev-parse | symbolic-ref | ls-files | ls-tree | ls-remote | check-ignore | merge-base | merge-tree | add | rm | mv | blame | grep | describe | cat-file | for-each-ref | rev-list | shortlog | name-rev | show-ref | diff-tree | diff-files | diff-index | help | version | --version) return 0 ;;
+    commit)
+      [ -z "$state" ] && return 1
+      has_arg --amend && return 1
+      return 0
+      ;;
     # Switching and fetching are safe unless forced: -f / --discard-changes
     # throw away local changes, -C / -B reset an existing branch, and a
     # +refspec or --force overwrites a local branch.
@@ -188,12 +218,12 @@ git_ok() { # git_ok <sub>
 }
 gh_ok() { # gh_ok <sub> <sub2>
   case "$1 $2" in
-    'pr create'*) return 0 ;;   # handled above: Closes check and a prompt
-    'pr view'*|'pr list'*|'pr checks'*|'pr diff'*|'pr status'*) return 0 ;;
-    'issue view'*|'issue list'*|'issue status'*) return 0 ;;
-    'run view'*|'run list'*|'run watch'*|'repo view'*|'auth status'*|'label list'*) return 0 ;;
-    'release view'*|'release list'*|'workflow view'*|'workflow list'*|'search '*) return 0 ;;
-    'status '*|'help '*|'version '*|'--version '*|' ') return 0 ;;
+    'pr create'*) return 0 ;; # handled above: Closes check and a prompt
+    'pr view'* | 'pr list'* | 'pr checks'* | 'pr diff'* | 'pr status'*) return 0 ;;
+    'issue view'* | 'issue list'* | 'issue status'*) return 0 ;;
+    'run view'* | 'run list'* | 'run watch'* | 'repo view'* | 'auth status'* | 'label list'*) return 0 ;;
+    'release view'* | 'release list'* | 'workflow view'* | 'workflow list'* | 'search '*) return 0 ;;
+    'status '* | 'help '* | 'version '* | '--version '* | ' ') return 0 ;;
     'api '*) ! has_arg -X '--method' -f -F '--field' '--raw-field' '--input' '-X*' '--method=*' ;;
     *) return 1 ;;
   esac
@@ -205,37 +235,47 @@ while IFS= read -r seg; do
   [ -n "$other" ] && break
   # shellcheck disable=SC2206 # word splitting (globbing off) is the point
   words=($seg)
-  n=${#words[@]}; i=0; cmdpos=1
+  n=${#words[@]}
+  i=0
+  cmdpos=1
   while [ $i -lt $n ] && [ $cmdpos -eq 1 ]; do
     w=${words[$i]}
     case "$w" in
-      [A-Za-z_]*=*|command|env|sudo|exec|xargs|eval|time|nohup|nice|bash|sh|zsh|-*) i=$((i + 1)); continue ;;
-      git|*/git)
+      [A-Za-z_]*=* | command | env | sudo | exec | xargs | eval | time | nohup | nice | bash | sh | zsh | -*)
+        i=$((i + 1))
+        continue
+        ;;
+      git | */git)
         j=$((i + 1))
         while [ $j -lt $n ]; do
           case "${words[$j]}" in
-            -C|-c|--git-dir|--work-tree|--namespace) j=$((j + 2)) ;;
+            -C | -c | --git-dir | --work-tree | --namespace) j=$((j + 2)) ;;
             -*) j=$((j + 1)) ;;
             *) break ;;
           esac
         done
-        sub=${words[$j]:-}; rest="${words[*]:$((j + 1))}"
-        git_ok "$sub" || other="git ${sub}" ;;
-      gh|*/gh)
+        sub=${words[$j]:-}
+        rest="${words[*]:$((j + 1))}"
+        git_ok "$sub" || other="git ${sub}"
+        ;;
+      gh | */gh)
         j=$((i + 1))
         while [ $j -lt $n ]; do
           case "${words[$j]}" in
-            -R|--repo|--hostname) j=$((j + 2)) ;;
+            -R | --repo | --hostname) j=$((j + 2)) ;;
             -*) j=$((j + 1)) ;;
             *) break ;;
           esac
         done
-        sub=${words[$j]:-}; sub2=${words[$((j + 1))]:-}; rest="${words[*]:$((j + 1))}"
-        gh_ok "$sub" "$sub2" || other="gh ${sub} ${sub2}" ;;
+        sub=${words[$j]:-}
+        sub2=${words[$((j + 1))]:-}
+        rest="${words[*]:$((j + 1))}"
+        gh_ok "$sub" "$sub2" || other="gh ${sub} ${sub2}"
+        ;;
     esac
     cmdpos=0
   done
-done <<EOF
+done << EOF
 $segments
 EOF
 set +f
@@ -266,7 +306,8 @@ fi
 
 # deny: the PR must close the run's issue. Only the precise form has a body
 # we can read; anything else is left to the prompt.
-run_id=${state%/state.md}; run_id=${run_id##*/}
+run_id=${state%/state.md}
+run_id=${run_id##*/}
 issue=$(issue_of "$run_id")
 if [ $precise_pr -eq 1 ] && [ -n "$issue" ]; then
   haystack=$cmd
@@ -287,7 +328,13 @@ if [ $is_push -eq 0 ] && [ $is_pr_create -eq 0 ]; then
 fi
 
 # ask: everything else that leaves the machine. The phase goes in the prompt.
-if [ $is_pr_create -eq 1 ]; then what="PR 作成"; obj="PR 作成を"; else what="push"; obj="push を"; fi
+if [ $is_pr_create -eq 1 ]; then
+  what="PR 作成"
+  obj="PR 作成を"
+else
+  what="push"
+  obj="push を"
+fi
 detail="${where}、Base ${base:-—}"
 [ $is_pr_create -eq 1 ] && [ -n "$issue" ] && detail="${detail}、Closes #${issue}"
 [ -n "$other" ] && detail="${detail}、ほかに ${other} を含む"
@@ -295,19 +342,23 @@ pr_url=$(awk '/^## PR/{p=1; next} /^## /{p=0} p' "$state" | grep -Eo -m1 'https:
 
 case "$status" in
   pr:awaiting-approval)
-    note="PR ゲート：${obj}承認しますか？" ;;
-  pr:awaiting-review|pr:in-progress|pr:ready-to-merge)
+    note="PR ゲート：${obj}承認しますか？"
+    ;;
+  pr:awaiting-review | pr:in-progress | pr:ready-to-merge)
     if [ $is_pr_create -eq 1 ] && [ -n "$pr_url" ]; then
       note="⚠ PR は既にあります（${pr_url}）。${obj}承認しますか？"
     elif [ -n "$pr_url" ]; then
       note="PR 作成後の ${what}（${pr_url}）を承認しますか？"
     else
       note="⚠ ## PR に URL がありません。${obj}承認しますか？"
-    fi ;;
-  done|canceled)
-    note="⚠ このブランチの run は ${status} です（完了済み）。${obj}承認しますか？" ;;
+    fi
+    ;;
+  done | canceled)
+    note="⚠ このブランチの run は ${status} です（完了済み）。${obj}承認しますか？"
+    ;;
   *)
-    note="⚠ まだ PR ゲート前です。${obj}承認しますか？" ;;
+    note="⚠ まだ PR ゲート前です。${obj}承認しますか？"
+    ;;
 esac
 note="${note}${force_note}"
 if { [ $is_push -eq 1 ] && [ $precise_push -eq 0 ]; } || { [ $is_pr_create -eq 1 ] && [ $precise_pr -eq 0 ]; }; then

@@ -1,0 +1,63 @@
+name: 不具合の報告
+description: tixforge のスキル・hook・スクリプト・workflow が期待どおりに動かない
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        guard（push・PR・マージの確認）をすり抜けられる、などセキュリティに関わるものは、ここではなく [脆弱性の報告](https://github.com/kmjak/tixforge/security/advisories/new) からお願いします。
+  - type: input
+    id: version
+    attributes:
+      label: tixforge のバージョン
+      description: "`claude plugin list` か `~/.claude/plugins/marketplaces/tixforge/.claude-plugin/plugin.json` の version"
+      placeholder: 2.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: どこで起きたか
+      options:
+        - /tixforge:project
+        - /tixforge:ticket
+        - /tixforge:dev
+        - hook（guard・session-start）
+        - GitHub Actions の workflow
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 起きたこと
+      description: 実行したコマンドやスキル、出たメッセージ（そのまま貼る）
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待したこと
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      placeholder: |
+        1. /tixforge:ticket create ...
+        2. ...
+  - type: input
+    id: env
+    attributes:
+      label: 環境
+      description: OS、Claude Code のバージョン（`claude --version`）、`bash --version` の 1 行目
+      placeholder: macOS 26.4, Claude Code 2.x, GNU bash 3.2.57
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: .tixforge/config.yml
+      description: 関係しそうなら（秘密の値は消す）
+      render: yaml

@@ -21,19 +21,28 @@
 # Prints the paths, one per line, in that order.
 set -euo pipefail
 
-usage() { echo "usage: review-input.sh <id> <base> [--since <commit>]" >&2; exit 2; }
+usage() {
+  echo "usage: review-input.sh <id> <base> [--since <commit>]" >&2
+  exit 2
+}
 [ $# -eq 2 ] || [ $# -eq 4 ] || usage
 id=$1 base=$2 since=""
 if [ $# -eq 4 ]; then
   [ "$3" = --since ] || usage
   since=$4
-  git rev-parse --verify -q "$since^{commit}" >/dev/null || { echo "unknown commit: $since" >&2; exit 2; }
+  git rev-parse --verify -q "$since^{commit}" > /dev/null || {
+    echo "unknown commit: $since" >&2
+    exit 2
+  }
 fi
 
-git rev-parse --verify -q "$base" >/dev/null || { echo "unknown base: $base" >&2; exit 2; }
+git rev-parse --verify -q "$base" > /dev/null || {
+  echo "unknown base: $base" >&2
+  exit 2
+}
 fork=$(git merge-base "$base" HEAD)
 remote="refs/remotes/origin/${base#origin/}"
-if git rev-parse --verify -q "$remote" >/dev/null; then
+if git rev-parse --verify -q "$remote" > /dev/null; then
   rfork=$(git merge-base "$remote" HEAD)
   # The later of the two fork points: the other one is its ancestor.
   if [ "$rfork" != "$fork" ] && git merge-base --is-ancestor "$fork" "$rfork"; then

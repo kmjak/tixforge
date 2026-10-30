@@ -23,33 +23,53 @@
 # says which branch is its own. Exit: 0 ok, 2 usage, 3 nothing to migrate.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$here/lib.sh"
 
 apply="" github=""
 for a in "$@"; do
-  case $a in --apply) apply=1 ;; --github) github=1 ;; *) grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2; exit 2 ;; esac
+  case $a in --apply) apply=1 ;; --github) github=1 ;; *)
+    grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2
+    exit 2
+    ;;
+  esac
 done
 
-top=$(flow_top); cd "$top" || exit 1
+top=$(flow_top)
+cd "$top" || exit 1
 old_conf=docs/flow.config.yml
-[ -f "$old_conf" ] || [ -d docs/flow ] || [ -d docs/tickets ] || { echo "flow のファイルが見つからない（docs/flow.config.yml・docs/flow/・docs/tickets/）"; exit 3; }
+[ -f "$old_conf" ] || [ -d docs/flow ] || [ -d docs/tickets ] || {
+  echo "flow のファイルが見つからない（docs/flow.config.yml・docs/flow/・docs/tickets/）"
+  exit 3
+}
 
 say() { printf '%s %s\n' "$([ -n "$apply" ] && echo '•' || echo '(dry-run)')" "$*"; }
-run() { [ -n "$apply" ] && "$@"; return 0; }
-tracked() { git ls-files --error-unmatch "$1" >/dev/null 2>&1; }
+run() {
+  [ -n "$apply" ] && "$@"
+  return 0
+}
+tracked() { git ls-files --error-unmatch "$1" > /dev/null 2>&1; }
 
 prefix=T
 if [ -f "$old_conf" ]; then
-  p=$(cfg ticket.prefix "$old_conf"); [ -n "$p" ] && prefix=$p
+  p=$(cfg ticket.prefix "$old_conf")
+  [ -n "$p" ] && prefix=$p
 fi
 
 # new_id <old id> <ticket file or empty>: GT-<issue> or LT-<number>.
 new_id() {
   local n=""
   [ -n "$2" ] && [ -f "$2" ] && n=$(grep -Eo -m1 '^Issue:[[:space:]]*#[0-9]+' "$2" | tr -dc '0-9')
-  if [ -n "$n" ]; then printf 'GT-%06d\n' "$((10#$n))"; return; fi
-  n=${1#"$prefix"}; n=$(printf '%s' "$n" | tr -dc '0-9')
-  [ -n "$n" ] || { echo ""; return; }
+  if [ -n "$n" ]; then
+    printf 'GT-%06d\n' "$((10#$n))"
+    return
+  fi
+  n=${1#"$prefix"}
+  n=$(printf '%s' "$n" | tr -dc '0-9')
+  [ -n "$n" ] || {
+    echo ""
+    return
+  }
   printf 'LT-%06d\n' "$((10#$n))"
 }
 
@@ -71,11 +91,21 @@ if [ -f "$old_conf" ]; then
 fi
 
 # --- tickets and runs --------------------------------------------------------
-ids=$( { ls docs/tickets 2>/dev/null | sed -n 's/\.md$//p'; ls docs/flow 2>/dev/null | grep -v '^\.'; } | sort -u)
+ids=$({
+  ls docs/tickets 2> /dev/null | sed -n 's/\.md$//p'
+  for d in docs/flow/*; do
+    [ -e "$d" ] || continue
+    printf '%s\n' "${d##*/}"
+  done
+} | sort -u)
 for old in $ids; do
-  t="docs/tickets/$old.md"; [ -f "$t" ] || t=""
+  t="docs/tickets/$old.md"
+  [ -f "$t" ] || t=""
   new=$(new_id "$old" "$t")
-  [ -n "$new" ] || { echo "  ${old}：番号が読めないので移さない" >&2; continue; }
+  [ -n "$new" ] || {
+    echo "  ${old}：番号が読めないので移さない" >&2
+    continue
+  }
   if [ -n "$t" ]; then
     say "$t -> .tixforge/$new/ticket.md"
     if [ -n "$apply" ]; then
@@ -101,11 +131,14 @@ for old in $ids; do
     fi
   fi
 done
-if [ -e docs/flow/.active ]; then say "docs/flow/.active を削除"; run rm -f docs/flow/.active; fi
+if [ -e docs/flow/.active ]; then
+  say "docs/flow/.active を削除"
+  run rm -f docs/flow/.active
+fi
 if [ -n "$apply" ]; then
   for d in docs/flow docs/tickets; do
     [ -d "$d" ] || continue
-    find "$d" -type d -empty -delete 2>/dev/null
+    find "$d" -type d -empty -delete 2> /dev/null
     [ -d "$d" ] && echo "  $d に移していないファイルが残っている：中身を確かめて、要らなければ消す" >&2
   done
 fi
@@ -133,13 +166,13 @@ if [ -d .github/flow ]; then
   if [ -n "$apply" ]; then
     mkdir -p .github/tixforge
     cp "$here/ticket-hash.sh" "$here/messages.yml" .github/tixforge/
-    git rm -rq .github/flow 2>/dev/null || rm -rf .github/flow
+    git rm -rq .github/flow 2> /dev/null || rm -rf .github/flow
   fi
 fi
 
 # --- GitHub ------------------------------------------------------------------
 if [ -n "$github" ]; then
-  if ! bash "$here/github-preflight.sh" >/dev/null; then
+  if ! bash "$here/github-preflight.sh" > /dev/null; then
     echo "GitHub の操作は行わない：$(bash "$here/github-preflight.sh")" >&2
   else
     have=$(gh label list --limit 200 --json name --jq '.[].name')
@@ -147,21 +180,21 @@ if [ -n "$github" ]; then
       printf '%s\n' "$have" | grep -qx "flow:$l" || continue
       if ! printf '%s\n' "$have" | grep -qx "tixforge:$l"; then
         say "ラベル flow:${l} -> tixforge:${l}（付いている issue ごと名前を変える）"
-        run gh label edit "flow:$l" --name "tixforge:$l" >/dev/null
+        run gh label edit "flow:$l" --name "tixforge:$l" > /dev/null
         continue
       fi
       # Both exist (tixforge was set up before): move the issues, then drop
       # the old label.
       for n in $(gh issue list --state all --limit 1000 --label "flow:$l" --json number --jq '.[].number'); do
         say "#${n} の flow:${l} を tixforge:${l} に付け替える"
-        run gh issue edit "$n" --remove-label "flow:$l" --add-label "tixforge:$l" >/dev/null
+        run gh issue edit "$n" --remove-label "flow:$l" --add-label "tixforge:$l" > /dev/null
       done
       say "ラベル flow:${l} を削除する（issue は付け替え済み）"
-      run gh label delete "flow:$l" --yes >/dev/null
+      run gh label delete "flow:$l" --yes > /dev/null
     done
     say "足りない tixforge のラベルを作る"
     run bash "$here/issue-label.sh" setup
-    nums=$(gh issue list --state all --limit 1000 --search 'label:tixforge:todo,tixforge:in-progress,tixforge:in-review,tixforge:out-of-sync,flow:todo,flow:in-progress,flow:in-review' --json number --jq '.[].number' 2>/dev/null | sort -un)
+    nums=$(gh issue list --state all --limit 1000 --search 'label:tixforge:todo,tixforge:in-progress,tixforge:in-review,tixforge:out-of-sync,flow:todo,flow:in-progress,flow:in-review' --json number --jq '.[].number' 2> /dev/null | sort -un)
     tmpb=$(mktemp) || exit 1
     for n in $nums; do
       info=$(gh issue view "$n" --json state,stateReason --jq '.state + " " + (.stateReason // "")')
@@ -173,16 +206,20 @@ if [ -n "$github" ]; then
             -e 's/<!-- flow:ticket:end -->/<!-- tixforge:ticket:end -->/' \
             -e 's/`\/flow` がチケットと同期/tixforge がチケットと同期/' -e 's/by `\/flow`/by tixforge/' \
             -e 's/`\/flow edit`/`\/tixforge:ticket edit`/g' "$tmpb" > "$tmpb.new"
-          gh issue edit "$n" --body-file "$tmpb.new" >/dev/null
+          gh issue edit "$n" --body-file "$tmpb.new" > /dev/null
         fi
       fi
       case $info in
         "CLOSED NOT_PLANNED")
           if gh issue view "$n" --json comments --jq '.comments[].body' | grep -q '^Canceled by /flow: '; then
-            say "#${n}（キャンセル済み）に tixforge:canceled を付ける"; run bash "$here/issue-label.sh" "$n" canceled
-          fi ;;
+            say "#${n}（キャンセル済み）に tixforge:canceled を付ける"
+            run bash "$here/issue-label.sh" "$n" canceled
+          fi
+          ;;
         "CLOSED COMPLETED")
-          say "#${n}（完了）に tixforge:done を付ける"; run bash "$here/issue-label.sh" "$n" done ;;
+          say "#${n}（完了）に tixforge:done を付ける"
+          run bash "$here/issue-label.sh" "$n" done
+          ;;
       esac
     done
     rm -f "$tmpb" "$tmpb.new"

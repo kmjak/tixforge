@@ -21,7 +21,10 @@
 # Exit: 0 ok, 2 usage, 3 markers missing (extract) / no hash (stored).
 set -uo pipefail
 
-usage() { grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2; exit 2; }
+usage() {
+  grep '^#   [a-z]' "$0" | sed 's/^#   //' >&2
+  exit 2
+}
 
 START='<!-- tixforge:ticket:start -->'
 END='<!-- tixforge:ticket:end -->'
@@ -39,7 +42,7 @@ normalize() {
 }
 
 sha() {
-  if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -c1-12
+  if command -v sha256sum > /dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -c1-12
 }
 
 case ${1:-} in
