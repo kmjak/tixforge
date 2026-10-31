@@ -41,7 +41,7 @@ make fmt                                  # shfmt で整形（設定は .editorc
 | `skills/`・`references/`・`agents/` でファイルの名前を変えたら、参照している側も直す | `tests/plugin.test.sh` |
 | スクリプトは `make fmt` で整形する。手で整えない | `make lint` の `shfmt -d` |
 | PR のタイトルは Conventional Commits の形にする（下の「commit と PR」） | CI の `pr-title` |
-| v2 が残した state.md を `migrate` で移せる。v2 が英語のコメントで閉じた issue を読める。`tests/fixtures/v2/` は直さない | `tests/scripts.test.sh` の「v2 data」 |
+| v2 が残した state.md を `migrate` で移せる（テストの中の v2 の state.md は直さない）。v2 が英語のコメントで閉じた issue を読める | `tests/scripts.test.sh` の「v2 data」と issue-sync.sh の節 |
 
 ## commit と PR
 
