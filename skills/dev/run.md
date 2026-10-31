@@ -7,7 +7,15 @@
 
 `.tixforge/config.yml` の値は SKILL.md の「現在の状態」にある（`language` が無ければ日本語）。この run の間、`state.md` のセクション本文と、状態ファイルに書く固定の文言（「ゲート自動通過」「手動確認」「Round」の見出しなど。スクリプトが読むキー `Verification @` は除く）はこの言語で書く。指定された id は `bash <scripts>/ticket-id.sh normalize <引数>` で正規化する（エラーなら直さずに尋ねる）。
 
-**チケットの準備**（新規・再開のどちらでも最初に行う）：
+**状態ファイルの形式**（最初に行う）：`.tixforge/<ticket-id>/state.md` があれば `bash <scripts>/run-state.sh migrate --check <ticket-id>` を実行する。何か出たら、変わる内容を示し、AskUserQuestion で次から選ばせる。今の形式でない state.md のまま先に進めない。
+
+- **更新する**（説明：書いた本文と `Status` はそのまま）— `bash <scripts>/run-state.sh migrate <ticket-id>`
+- **run を消して最初から** — `.tixforge/<ticket-id>/state.md` と `history/` を削除し、新規として進める。チケット・ブランチ・commit は消さない。
+- **中断する** — 何も変えずに止まる。
+
+終了コード 5 なら、選ばせずに、plugin を更新するよう伝えて止まる。それ以外のエラーなら、出力を示して止まる。
+
+**チケットの準備**（新規・再開のどちらでも、続けて行う）：
 
 - **`GT-` のチケット**：`references/github/fetch.md` を Read し、その手順で issue からチケットを取ってくる（手元のコピーは毎回 issue から作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。issue がキャンセル済みなら、下の 0. に従う。issue が完了済み（`closed_as: completed`）なら、状態ファイルで分ける：
   - `Status` が `pr:*` → 下の 1. の `pr:*` へ進む（マージで issue が閉じた後の再開。pr.md の「再開」で `done` にする）。
@@ -34,7 +42,7 @@
 
 このファイルを run の単一の真実とする。
 
-- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は `GT-` の id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
+- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は `GT-` の id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
 - **セクション**（`## Research`・`## Approach`・`## Plan`・`## Implementation Log`・`## Review`・`## PR`）は各フェーズが Edit で書く。本文はドキュメント言語、見出しは英語の固定キーのまま変えない（このスキルが参照・再開に使うため）。
 - フェーズのセクションを書いたら、**続けて** `Status` を更新する（セクション → Status の順。逆にすると、中断したときに空のセクションのまま承認待ちになる）。
 - 承認を受けて（またはゲートを自動で通過して）次のフェーズへ進むときは、作業を始める前に `Status` を `<次のphase>:in-progress` にする。

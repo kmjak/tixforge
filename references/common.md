@@ -75,7 +75,7 @@
 | スクリプト | 用途 |
 |------------|------|
 | `ticket-id.sh` | id の取り出し・正規化・実在の確認・issue 番号への変換・次の番号（上記） |
-| `run-state.sh` | 状態ファイルの作成（`init`）、ヘッダの読み書き（`get` / `set`。`Status` の値を検査し、`Updated` も更新する） |
+| `run-state.sh` | 状態ファイルの作成（`init`）、ヘッダの読み書き（`get` / `set`。`Status` の値を検査し、`Updated` も更新する）、前の版の形式からの更新（`migrate`） |
 | `verify.sh` | 検証コマンドの実行と `Verification @ <hash>: …` の行の出力 |
 | `review-input.sh` | Review の agent に渡す差分・commit 一覧をファイルに書き出す |
 | `pr-status.sh` | PR の状況（レビュー・CI・コンフリクト）の判定 |
