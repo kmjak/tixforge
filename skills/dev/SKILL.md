@@ -34,7 +34,7 @@ allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project
 上の「現在の状態」にある進行中の run（`done`・`canceled` 以外）を使い、AskUserQuestion で選んでもらう（単一選択）。推測で決めない。
 
 1. **進行中の run を再開** — 進行中の run のチケット id と Status を説明に含める。**進行中の run が無ければこの選択肢は出さない。** 複数あるなら、どれを再開するか続けて尋ねる。
-2. **チケットを選んで始める** — チケット id を尋ねる（`.tixforge/*/ticket.md`、`tracker: github` なら `tixforge:todo` の issue を候補として示す）。
+2. **チケットを選んで始める** — チケット id を尋ねる（`tixforge:todo` の issue を候補として示す）。
 
 質問文に「前のフェーズに戻すのは `/tixforge:dev rewind <ticket-id>`」と添える。
 

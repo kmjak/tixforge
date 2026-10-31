@@ -17,23 +17,22 @@
 
 **チケットの準備**（新規・再開のどちらでも、続けて行う）：
 
-- **`GT-` のチケット**：`references/github/fetch.md` を Read し、その手順で issue からチケットを取ってくる（手元のコピーは毎回 issue から作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。issue がキャンセル済みなら、下の 0. に従う。issue が完了済み（`closed_as: completed`）なら、状態ファイルで分ける：
+- `references/github/fetch.md` を Read し、その手順で issue からチケットを取ってくる（手元のコピーは毎回 issue から作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。issue がキャンセル済みなら、下の 0. に従う。issue が完了済み（`closed_as: completed`）なら、状態ファイルで分ける：
   - `Status` が `pr:*` → 下の 1. の `pr:*` へ進む（マージで issue が閉じた後の再開。pr.md の「再開」で `done` にする）。
   - 状態ファイルが無い・`done` → 完了済みであることを伝えて止まる。
   - それより前のフェーズ → issue が閉じていることと `Status` を示し、どうするか尋ねる。
-- **`LT-` のチケット**：`.tixforge/<ticket-id>/ticket.md` を読む。無ければ停止し、`/tixforge:ticket create` で作るか尋ねる（id は create で自動的に決まるため、指定された id のままにはならないことも伝える）。dev の中でチケットの内容を捏造・作成しない。
 - 読んだら「`<ticket-id>`：<タイトル>」を示す（取り違えの防止）。
 
 続けて：
 
-0. **キャンセル済みのチケット**（`LT-` でチケットに `Status: canceled`、`GT-` で `closed_as: canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
+0. **キャンセル済みのチケット**（`closed_as: canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
 1. **状態ファイル `.tixforge/<ticket-id>/state.md` が存在する**場合：読んで `Status` から再開する。
    - `<phase>:awaiting-approval`（`pr` 以外）→ そのフェーズの要約とゲートを再提示し、停止して待つ。
    - `<phase>:in-progress`（`pr` 以外）→ そこまで書かれたセクションを読み直し（Implement ならブランチの `git log` / `git status` も確認）、そのフェーズを継続する。途中成果が信頼できずにやり直したいときは、**やり直す前に**、捨てることになるもの（commit の一覧など）を示して尋ねる（伝えるだけにしない）。フェーズを戻すなら `rewind.md` の手順で行う。
    - `pr:*` → `<plugin>/skills/dev/pr.md` を Read し、その「再開」に従う。
-   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。`GT-` で、PR がマージ済みなのに issue が開いたままなら、`references/github/pr.md`「マージされたとき」を確かめる。
+   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。PR がマージ済みなのに issue が開いたままなら、`references/github/pr.md`「マージされたとき」を確かめる。
 2. **状態ファイルが存在しない**場合：
-   - `GT-` なら `references/github/labels.md` を Read し、`bash <scripts>/issue-label.sh <番号> start` を実行する（終了コード 4：他の人が assign されている → 状態ファイルを作る前に停止して尋ねる）。
+   - `references/github/labels.md` を Read し、`bash <scripts>/issue-label.sh <番号> start` を実行する（終了コード 4：他の人が assign されている → 状態ファイルを作る前に停止して尋ねる）。
    - `bash <scripts>/run-state.sh init <ticket-id>` で状態ファイルを作り（`Status: research:in-progress`。`.tixforge/.gitignore` が無ければ一緒に作られ、状態ファイルは git に載らない）、Phase 1 を開始する。
 
 **いつでも**：ユーザーが「Plan からやり直したい」のように前のフェーズに戻りたいと言ったら、`<plugin>/skills/dev/rewind.md` の手順で戻す（`/tixforge:dev rewind` と同じ）。
@@ -42,7 +41,7 @@
 
 このファイルを run の単一の真実とする。
 
-- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は `GT-` の id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
+- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
 - **セクション**（`## Research`・`## Approach`・`## Plan`・`## Implementation Log`・`## Review`・`## PR`）は各フェーズが Edit で書く。本文はドキュメント言語、見出しは英語の固定キーのまま変えない（このスキルが参照・再開に使うため）。
 - フェーズのセクションを書いたら、**続けて** `Status` を更新する（セクション → Status の順。逆にすると、中断したときに空のセクションのまま承認待ちになる）。
 - 承認を受けて（またはゲートを自動で通過して）次のフェーズへ進むときは、作業を始める前に `Status` を `<次のphase>:in-progress` にする。
@@ -84,7 +83,7 @@
 3. **コードの調査は Explore agent に任せる**（このセッションの文脈を、Implement の前に調査の読み込みで使い切らないため）。リポジトリが小さく見えても、`find`・Grep・Read でコードを調べ始める前に、まず Explore を起動する（Agent ツールで `subagent_type: Explore`）。チケットの要約と、具体的な問い（影響しそうなコード領域・似た既存実装・テストの場所と書き方・守るべき制約など）を渡し、ファイルパス付きの要約を受け取る。自分で調べてよいのは、Explore が使えない環境だけ。受け取った要約のうち、判断に必要な箇所は自分でも Read して確かめる。
 4. 整理する：チケットの要求、関連コンテキスト、影響しそうなコード領域、制約、未解決の疑問点。
 5. **未決事項を片付ける**：チケットの「未決事項」を 1 項目ずつ並べ、項目ごとに次のどれかをユーザーと決める（決めるのはユーザー。Claude は調査の結果と推奨を示す）：
-   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ チケットに書き戻す：その項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。`GT-` なら `references/github/sync.md` のとおり issue に push する。
+   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ チケットに書き戻す：その項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。`references/github/sync.md` のとおり issue に push する。
    - **どう作るかの決定**（実装の選び方）→ Approach の「未決事項の解決」の表に書く（Phase 2）。チケットの未決事項は、表を指す 1 行（「Approach で決定」）に置き換える。
    - **対象外に回す** → チケットの「対象外」に移す。
    決まらない項目が 1 つでも残っていれば、Research のゲートで止まる（`gates` に無くても）。
@@ -102,8 +101,8 @@
 
 目的：方針を具体的なブランチ・確かめ方・commit 計画に落とす。
 
-1. **Base**（分岐元であり PR の向き先。`host: none` ではマージ先）を決める。優先順位：ユーザーがこの Plan で指定したもの ＞ チケットの `## Base` の節 ＞ `repository.base_branch` ＞ `git symbolic-ref --short refs/remotes/origin/HEAD` の `origin/` を除いたもの。そのブランチが今も存在するか（`host: github` ならリモートに、`none` ならローカルに）確かめ、無ければ（release ブランチがマージ済みなど）尋ねる。
-2. **ブランチ**：`<ticket-id>-<slug>`。slug は英小文字・数字・ハイフンだけにする（ドキュメント言語が日本語でも英語で書く）。その名前のブランチが無いことを確かめる（`host: github` ならローカル（`git show-ref`）とリモート（`git ls-remote --heads origin`）の両方、`none` ならローカルだけ）。あって、ヘッダの `Branch` でない（巻き戻しで残した古いブランチなど）場合は、別の名前（例：末尾に `-2`）にする。
+1. **Base**（分岐元であり PR の向き先）を決める。優先順位：ユーザーがこの Plan で指定したもの ＞ チケットの `## Base` の節 ＞ `repository.base_branch` ＞ `git symbolic-ref --short refs/remotes/origin/HEAD` の `origin/` を除いたもの。そのブランチがリモートに今も存在するか確かめ、無ければ（release ブランチがマージ済みなど）尋ねる。
+2. **ブランチ**：`<ticket-id>-<slug>`。slug は英小文字・数字・ハイフンだけにする（ドキュメント言語が日本語でも英語で書く）。その名前のブランチが無いことを、ローカル（`git show-ref`）とリモート（`git ls-remote --heads origin`）の両方で確かめる。あって、ヘッダの `Branch` でない（巻き戻しで残した古いブランチなど）場合は、別の名前（例：末尾に `-2`）にする。
 3. **受け入れ条件 → 確かめ方の対応表**を作る。チケットの受け入れ条件の**全項目**に 1 行ずつ、何で・誰が確かめるかを決める。Implement はこの表に沿ってテストを書き、Review はこの表で照合する。
    ```markdown
    | # | 受け入れ条件 | 確かめ方 | 種別 |
@@ -123,11 +122,11 @@
 
 目的：承認済みの方針と計画に沿って実装する。
 
-1. **ブランチの準備**：リポジトリの状態を確認する（git リポジトリであること。このチケットと無関係な未コミット変更があれば警告する。`.tixforge/` の中は git 管理外なので対象外）。承認済みブランチが無ければ **Base の最新**から作成する：`host: github` なら `git fetch origin <Base>` の後の `origin/<Base>` から（`git switch -c <ブランチ> origin/<Base>`）、`host: none` ならローカルの `<Base>` から。既にあれば切り替えるだけにする（中断からの再開で作成済みのことがある）。
+1. **ブランチの準備**：リポジトリの状態を確認する（git リポジトリであること。このチケットと無関係な未コミット変更があれば警告する。`.tixforge/` の中は git 管理外なので対象外）。承認済みブランチが無ければ **Base の最新**から作成する：`git fetch origin <Base>` の後の `origin/<Base>` から（`git switch -c <ブランチ> origin/<Base>`）。既にあれば切り替えるだけにする（中断からの再開で作成済みのことがある）。
 2. 承認済みブランチ上で、承認済みの commit 分割に従って実装・commit する。
    - **テストは対応表に沿って書く。** 表の `自動` の行のテストを、表に書いたテスト名で作る。名前や場所を変えたら `## Implementation Log` に記録する（Review が照合できるように）。
    - **commit メッセージは `docs/context/commit.md` に従う**（最初の commit の前に読む。`Language:` の言語で書く）。`Source:` にパスがあればそのファイルを規約として読み、本文は補足として扱う。**`Source:` のファイルが読めなければ、黙って別の書式にしない。** 止まって伝え、`/tixforge:project update` で設定し直すか、今回は `commit.md` の本文と直近の `git log` の書式で進めるかを尋ねる。`commit.md` 自体が無ければ直近の `git log` の書式に合わせ、`/tixforge:project init` の再実行で作れることを伝える。
-   - `GT-` なら、最初の commit のメッセージの最後の行に `Closes #<番号>` のトレーラーを入れる（`references/github/pr.md`。Base が default branch でない運用でも、リリースで issue が閉じるようにするため）。
+   - 最初の commit のメッセージの最後の行に `Closes #<番号>` のトレーラーを入れる（`references/github/pr.md`。Base が default branch でない運用でも、リリースで issue が閉じるようにするため）。
    - commit ごとの承認では止めない。
 3. commit を積むごとに `## Implementation Log`（commit hash とメッセージ、実装中の重要な判断）を更新する。
 4. 承認された計画どおりに進められないと分かったら（ある commit を大きく変える必要がある、方針が誤っていた等）、停止して提起する。これは小さな確認ではなく本当の判断事項。戻るなら `rewind.md` の手順で戻す。
@@ -143,7 +142,7 @@
 - hash の後に `+dirty` が付いたら、未コミットの変更を検証したことになる。commit してから実行し直す（検証は commit に対して記録する）。検証コマンドがファイルを書き換えた（自動整形など）ときも `+dirty` が付き、変わったファイルが続けて出力される。その変更を確かめて commit してから実行し直す。
 - **終了コード 1（失敗あり）**：出力に並ぶ失敗したコマンドのログファイルを Read し、このチケットの範囲内で原因を直して commit し（`Implementation Log` に記録）、もう一度 `bash <scripts>/verify.sh` を実行する。全て通るまでゲートに進まない。
 - 次の場合は直さずに停止し、ユーザーに判断を求める：
-  - `Base` でも同じく失敗する（既存の失敗）。確かめるときは、変更は commit 済みなので `git switch <Base>`（`host: github` なら `origin/<Base>` を `git switch --detach`）で切り替えて `bash <scripts>/verify.sh` を実行し、終わったら元のブランチに `git switch` で戻る。
+  - `Base` でも同じく失敗する（既存の失敗）。確かめるときは、変更は commit 済みなので `origin/<Base>` を `git switch --detach` で切り替えて `bash <scripts>/verify.sh` を実行し、終わったら元のブランチに `git switch` で戻る。
   - 直すのにチケットの範囲外の変更や、方針・計画の変更が必要
   - 環境の問題（依存が無い、サービスが起動していない等）で実行できない
 - **テストを通すために、テストの削除・スキップ・期待値の書き換え・lint の無効化をしない。** それが本当に正しい場合は、理由を示してユーザーの承認を得る。

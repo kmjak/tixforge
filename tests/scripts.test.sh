@@ -39,9 +39,8 @@ commands:      # run in order
   test: echo testing && exit 0
   lint: "echo 'a # not a comment' ; exit 1"
 ticket:
-  tracker: local
+  tracker: github
 repository:
-  host: github
   base_branch: main
 review:
   required: false
@@ -62,7 +61,7 @@ section="lib.sh cfg"
 # shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$scripts/lib.sh"
 eq ja "$(cfg language)" "top-level scalar with comment"
-eq local "$(cfg ticket.tracker)" "nested scalar"
+eq github "$(cfg ticket.tracker)" "nested scalar"
 eq false "$(cfg review.required)" "review.required"
 eq "" "$(cfg ticket.nothing)" "missing key"
 eq "approach,plan,pr" "$(cfg_list gates | paste -sd, -)" "cfg_list"
@@ -85,11 +84,11 @@ cfg_has nothing && ng "cfg_has nothing" || ok
 # --- ticket-id.sh ----------------------------------------------------------
 section="ticket-id.sh"
 tid() { bash "$scripts/ticket-id.sh" "$@"; }
-eq LT-000123 "$(tid normalize 123)" "a bare number follows tracker: local"
+eq GT-000123 "$(tid normalize 123)" "a bare number is issue N"
 eq GT-000123 "$(tid normalize '#123')" "#N is issue N"
 eq GT-000123 "$(tid normalize gt-000123)" "prefix in any case"
-eq LT-000007 "$(tid normalize LT-000007)" "canonical"
-eq LT-1234567 "$(tid normalize 1234567)" "more than 6 digits"
+eq GT-000007 "$(tid normalize GT-000007)" "canonical"
+eq GT-1234567 "$(tid normalize 1234567)" "more than 6 digits"
 eq GT-1234567 "$(tid normalize GT-1234567)" "7 digits with a prefix"
 tid normalize GT-00123 2> /dev/null
 eq 2 $? "too few digits are not padded"
@@ -102,95 +101,77 @@ eq 2 $? "invalid id"
 tid normalize T000123 2> /dev/null
 eq 2 $? "the old T-prefix form"
 has "GT-000123" "$(tid normalize GT-00123 2>&1)" "the error shows the right form"
+# v2's local tickets: an error that points at the migration.
+tid normalize LT-000001 2> /dev/null
+eq 2 $? "a local ticket (v2) is refused"
+has "/tixforge:project update" "$(tid normalize lt-000001 2>&1)" "the error points at update"
 eq 123 "$(tid number GT-000123)" "number"
 eq 8 "$(tid number GT-000008)" "number, not octal"
 tid number LT-000001 2> /dev/null
 eq 2 $? "a local ticket has no issue number"
-cp .tixforge/config.yml "$tmp/keep-conf.yml"
-sed 's/tracker: local/tracker: github/' "$tmp/keep-conf.yml" > .tixforge/config.yml
-eq GT-000123 "$(tid normalize 123)" "a bare number follows tracker: github"
-grep -v 'tracker:' "$tmp/keep-conf.yml" > .tixforge/config.yml
-tid normalize 123 2> /dev/null
-eq 2 $? "a bare number without a tracker"
-cp "$tmp/keep-conf.yml" .tixforge/config.yml
+tid next 2> /dev/null
+eq 2 $? "next is gone"
 
 # detect: an id only in an explicit form, or when the whole text is a number.
 dt() { tid detect "$@" | sed -n "${n:-1}p"; }
 eq "id: none" "$(dt '404 ページを作る')" "a number inside a sentence is not an id"
 eq "rest: 404 ページを作る" "$(n=2 dt '404 ページを作る')" "rest keeps the sentence"
-eq "id: LT-000404" "$(dt 404)" "the whole text is a number"
+eq "id: GT-000404" "$(dt 404)" "the whole text is a number"
 eq "id: GT-000012" "$(dt 'GT-000012 の受け入れ条件を直したい')" "explicit id in a sentence"
 eq "rest: の受け入れ条件を直したい" "$(n=2 dt 'GT-000012 の受け入れ条件を直したい')" "rest without the id"
 eq "id: GT-000007" "$(dt 'ログイン #7 の続き')" "#N in a sentence"
 eq "rest: ログイン の続き" "$(n=2 dt 'ログイン #7 の続き')" "rest is tidied"
 eq "invalid: gt-12" "$(dt 'gt-12 を直して')" "an explicit id with the wrong digit count"
+eq "invalid: LT-000003" "$(dt 'LT-000003 の続き')" "a local ticket (v2) is reported, not ignored"
 eq "id: none" "$(dt 'ログイン画面を作りたい')" "no id"
 eq "id: none" "$(dt 'v2 の API')" "letters and digits are not an id"
-
-# next: LT ids from .tixforge/ and local branch names only.
-eq LT-000001 "$(tid next)" "first ticket"
-mkdir -p .tixforge/LT-000005
-eq LT-000006 "$(tid next)" "a ticket folder counts"
-git branch LT-000009-x
-eq LT-000010 "$(tid next)" "a branch name counts"
-git branch T2024-release
-eq LT-000010 "$(tid next)" "an unrelated branch does not count"
-mkdir -p .tixforge/GT-000050
-eq LT-000010 "$(tid next)" "a GitHub ticket does not count"
-rm -rf .tixforge/LT-000005 .tixforge/GT-000050
-git branch -D -q LT-000009-x T2024-release
-
-# exists (LT; GT is tested with the gh stub below)
-tid exists LT-000001 > /dev/null
-eq 1 $? "no such local ticket"
 
 # --- run-state.sh --------------------------------------------------------------
 section="run-state.sh"
 st() { bash "$scripts/run-state.sh" "$@"; }
-mkdir -p .tixforge/LT-000001 && printf '# LT-000001: A\n\n## 背景\n' > .tixforge/LT-000001/ticket.md
-eq .tixforge/LT-000001/state.md "$(st init LT-000001)" "init"
+mkdir -p .tixforge/GT-000901 && printf '# GT-000901: A\n\n## 背景\n' > .tixforge/GT-000901/ticket.md
+eq .tixforge/GT-000901/state.md "$(st init GT-000901)" "init"
 [ -f .tixforge/.gitignore ] && ok || ng "init creates .tixforge/.gitignore"
 eq ".tixforge/.gitignore" "$(git status --porcelain --untracked-files=all .tixforge | cut -c4-)" "only .gitignore is visible to git"
 git add .tixforge/.gitignore && git commit -q -m gitignore
-eq LT-000001 "$(tid exists LT-000001 > /dev/null && echo LT-000001)" "exists: a local ticket"
-st init LT-000001 2> /dev/null
+st init GT-000901 2> /dev/null
 eq 3 $? "init twice"
 st init T000001 2> /dev/null
 eq 2 $? "not a ticket id"
-eq research:in-progress "$(st get LT-000001)" "initial Status"
-eq 3 "$(st get LT-000001 Format)" "init writes the current Format"
+eq research:in-progress "$(st get GT-000901)" "initial Status"
+eq 3 "$(st get GT-000901 Format)" "init writes the current Format"
 eq "Research|Approach|Plan|Implementation Log|Review|PR" \
-  "$(sed -n 's/^## //p' .tixforge/LT-000001/state.md | paste -sd'|' -)" "init writes the six sections in order"
-eq 0 "$(grep -c '<!--' .tixforge/LT-000001/state.md)" "the sections start empty"
-eq "" "$(st migrate --check LT-000001)" "migrate --check: nothing for a current file"
-st set LT-000001 Issue '#1' 2> /dev/null
+  "$(sed -n 's/^## //p' .tixforge/GT-000901/state.md | paste -sd'|' -)" "init writes the six sections in order"
+eq 0 "$(grep -c '<!--' .tixforge/GT-000901/state.md)" "the sections start empty"
+eq "" "$(st migrate --check GT-000901)" "migrate --check: nothing for a current file"
+st set GT-000901 Issue '#1' 2> /dev/null
 eq 2 $? "Issue is not a header field"
-git branch LT-000001-a
-eq LT-000001-a "$(st set LT-000001 Branch LT-000001-a)" "set Branch"
-st set LT-000001 Status implement:typo 2> /dev/null
+git branch GT-000901-a
+eq GT-000901-a "$(st set GT-000901 Branch GT-000901-a)" "set Branch"
+st set GT-000901 Status implement:typo 2> /dev/null
 eq 2 $? "invalid Status"
-st set LT-000001 Updated x 2> /dev/null
+st set GT-000901 Updated x 2> /dev/null
 eq 2 $? "Updated is not settable"
-eq plan:awaiting-approval "$(st set LT-000001 Status plan:awaiting-approval)" "set Status"
-st set LT-000001 Status implement:in-progress > /dev/null
-grep -q '^## Implementation Log' .tixforge/LT-000001/state.md && ok || ng "sections kept"
-eq "$(printf 'LT-000001\timplement:in-progress\tLT-000001-a')" "$(st list)" "list"
-st get LT-000404 2> /dev/null
+eq plan:awaiting-approval "$(st set GT-000901 Status plan:awaiting-approval)" "set Status"
+st set GT-000901 Status implement:in-progress > /dev/null
+grep -q '^## Implementation Log' .tixforge/GT-000901/state.md && ok || ng "sections kept"
+eq "$(printf 'GT-000901\timplement:in-progress\tGT-000901-a')" "$(st list)" "list"
+st get GT-000404 2> /dev/null
 eq 1 $? "no such run"
-eq pr:ready-to-merge "$(st set LT-000001 Status pr:ready-to-merge)" "ready-to-merge is a Status"
-st set LT-000001 Status implement:in-progress > /dev/null
+eq pr:ready-to-merge "$(st set GT-000901 Status pr:ready-to-merge)" "ready-to-merge is a Status"
+st set GT-000901 Status implement:in-progress > /dev/null
 
 # rewind: later sections move to history/, the target gets a note.
-mkdir -p .tixforge/LT-000009
-bash "$scripts/run-state.sh" init LT-000009 > /dev/null
-f9=.tixforge/LT-000009/state.md
+mkdir -p .tixforge/GT-000909
+bash "$scripts/run-state.sh" init GT-000909 > /dev/null
+f9=.tixforge/GT-000909/state.md
 for sec in Research Approach Plan 'Implementation Log' Review PR; do
   awk -v s="## $sec" -v b="body of $sec" '$0 == s { print; print b; skip = 1; next } skip && /^<!--/ { skip = 0; next } { skip = 0; print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
 done
-st set LT-000009 Status review:in-progress > /dev/null
-h=$(st rewind LT-000009 plan --reason "分割を変える")
-has ".tixforge/LT-000009/history/" "$h" "rewind prints the history file"
-eq plan:in-progress "$(st get LT-000009)" "rewind sets the Status"
+st set GT-000909 Status review:in-progress > /dev/null
+h=$(st rewind GT-000909 plan --reason "分割を変える")
+has ".tixforge/GT-000909/history/" "$h" "rewind prints the history file"
+eq plan:in-progress "$(st get GT-000909)" "rewind sets the Status"
 has "body of Approach" "$(cat "$f9")" "earlier sections stay"
 case "$(cat "$f9")" in *"body of Plan"* | *"body of Review"*) ng "the target and later sections leave state.md" ;; *) ok ;; esac
 has "body of Plan" "$(cat "$h")" "they are in the history file"
@@ -199,45 +180,45 @@ has "> 巻き戻し（" "$(cat "$f9")" "the target section notes the rewind"
 has "分割を変える" "$(cat "$f9")" "with the reason"
 sleep 1
 awk '$0 == "## Implementation Log" { print; print "kept log"; next } { print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
-st rewind LT-000009 approach --keep-log > /dev/null
+st rewind GT-000909 approach --keep-log > /dev/null
 has "kept log" "$(cat "$f9")" "--keep-log keeps the Implementation Log"
 awk '$0 == "## Review" { print; print "a review"; next } { print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
-st rewind LT-000009 implement 2> /dev/null
+st rewind GT-000909 implement 2> /dev/null
 eq 2 $? "cannot rewind forward (approach -> implement)"
-eq approach:in-progress "$(st get LT-000009)" "a refused rewind leaves the Status"
-st set LT-000009 Status review:in-progress > /dev/null
-st rewind LT-000009 implement > /dev/null
+eq approach:in-progress "$(st get GT-000909)" "a refused rewind leaves the Status"
+st set GT-000909 Status review:in-progress > /dev/null
+st rewind GT-000909 implement > /dev/null
 has "kept log" "$(cat "$f9")" "rewinding to implement keeps the log"
 case "$(cat "$f9")" in *"a review"*) ng "rewinding to implement moves Review" ;; *) ok ;; esac
-st rewind LT-000009 review 2> /dev/null
+st rewind GT-000909 review 2> /dev/null
 eq 2 $? "cannot rewind to review"
 # Rewinding to the current phase is a normal use (redo the Plan).
-st set LT-000009 Status plan:awaiting-approval > /dev/null
-st rewind LT-000009 plan > /dev/null && ok || ng "rewind to the current phase"
+st set GT-000909 Status plan:awaiting-approval > /dev/null
+st rewind GT-000909 plan > /dev/null && ok || ng "rewind to the current phase"
 # "## " inside a fence is not a section: the whole Approach moves.
-st set LT-000009 Status plan:in-progress > /dev/null
+st set GT-000909 Status plan:in-progress > /dev/null
 awk '$0 == "## Approach" { print; print "fenced start"; print "```markdown"; print "## 背景"; print "fenced tail"; print "```"; print "after fence"; next } { print }' "$f9" > "$tmp/s9" && cat "$tmp/s9" > "$f9"
-h=$(st rewind LT-000009 approach --reason 'C:\temp\new')
+h=$(st rewind GT-000909 approach --reason 'C:\temp\new')
 case "$(cat "$f9")" in *"fenced"* | *"after fence"* | *"## 背景"*) ng "a fenced ## line ends the section" ;; *) ok ;; esac
 has "after fence" "$(cat "$h")" "the whole fenced Approach is in the history"
 has 'C:\temp\new' "$(cat "$h")" "backslashes of the reason are kept (history)"
 has 'C:\temp\new' "$(cat "$f9")" "backslashes of the reason are kept (note)"
 # Two rewinds in the same second get two history files.
-h1=$(st rewind LT-000009 approach --reason one)
-h2=$(st rewind LT-000009 approach --reason two)
+h1=$(st rewind GT-000909 approach --reason one)
+h2=$(st rewind GT-000909 approach --reason two)
 [ "$h1" != "$h2" ] && [ -f "$h1" ] && [ -f "$h2" ] && ok || ng "same-second rewinds keep both history files ($h1, $h2)"
 has "Reason: one" "$(cat "$h1")" "the first history file is not overwritten"
-st set LT-000009 Status done > /dev/null
-st rewind LT-000009 plan 2> /dev/null
+st set GT-000909 Status done > /dev/null
+st rewind GT-000909 plan 2> /dev/null
 eq 4 $? "a done run is not rewound"
-rm -rf .tixforge/LT-000009
+rm -rf .tixforge/GT-000909
 
 # --- project-status.sh -------------------------------------------------------------
 section="project-status.sh"
 out=$(bash "$scripts/project-status.sh")
-has "tracker=local" "$out" "config"
+has "tracker=github" "$out" "config"
 has "gates=approach,plan,pr" "$out" "gates"
-has "LT-000001: Status implement:in-progress" "$out" "open run"
+has "GT-000901: Status implement:in-progress" "$out" "open run"
 out=$(cd "$tmp" && bash "$scripts/project-status.sh")
 eq 0 $? "outside a repo exits 0"
 has "config.yml が無い" "$out" "no config"
@@ -247,48 +228,71 @@ has "gates=[]（pr のみ）" "$(bash "$scripts/project-status.sh")" "explicit e
 grep -v '^gates:' "$tmp/keep-gates.yml" > .tixforge/config.yml
 has "gates=（未設定）" "$(bash "$scripts/project-status.sh")" "missing gates"
 cp "$tmp/keep-gates.yml" .tixforge/config.yml
+# What v2 left: local tickets, tracker: local, host: none.
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "nothing to migrate" ;; *) ok ;; esac
+mkdir -p .tixforge/LT-000003
+printf '# LT-000003: A\n\n## 背景\n' > .tixforge/LT-000003/ticket.md
+has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "a local ticket to move"
+printf '# LT-000003: A\nStatus: canceled\nReason: GT-000061 に移した\n' > .tixforge/LT-000003/ticket.md
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a canceled local ticket needs nothing" ;; *) ok ;; esac
+printf '# LT-000003: A\n' > .tixforge/LT-000003/ticket.md
+printf '| Field | Value |\n|---|---|\n| Status | done |\n' > .tixforge/LT-000003/state.md
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a done local run needs nothing" ;; *) ok ;; esac
+printf '| Field | Value |\n|---|---|\n| Status | plan:awaiting-approval |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
+has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "a local run in progress"
+bash "$scripts/run-state.sh" set LT-000003 Status canceled > /dev/null && ok || ng "run-state set on a local run"
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
+printf '| Field | Value |\n|---|---|\n| Status | pr:awaiting-review |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
+bash "$scripts/run-state.sh" set LT-000003 Status done > /dev/null && ok || ng "a local run with a PR is finished by hand"
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
+rm -rf .tixforge/LT-000003
+sed 's/tracker: github/tracker: local/' "$tmp/keep-gates.yml" > .tixforge/config.yml
+has "移行が要る: tracker: local（" "$(bash "$scripts/project-status.sh")" "tracker: local"
+awk '{ print } /^repository:$/ { print "  host: none" }' "$tmp/keep-gates.yml" > .tixforge/config.yml
+has "移行が要る: repository.host: none（" "$(bash "$scripts/project-status.sh")" "host: none"
+cp "$tmp/keep-gates.yml" .tixforge/config.yml
 
 # --- session-start.sh ------------------------------------------------------
 section="session-start.sh"
-git switch -q LT-000001-a
+git switch -q GT-000901-a
 out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
-has "run LT-000001" "$out" "run on this branch"
+has "run GT-000901" "$out" "run on this branch"
 has "skills/dev/run.md" "$out" "tells to re-read run.md"
 case "$out" in *"skills/dev/pr.md"*) ng "pr.md only in the PR phase" ;; *) ok ;; esac
-bash "$scripts/run-state.sh" set LT-000001 Status pr:awaiting-review > /dev/null
+bash "$scripts/run-state.sh" set GT-000901 Status pr:awaiting-review > /dev/null
 out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
 has "skills/dev/pr.md" "$out" "the PR phase also re-reads pr.md"
-bash "$scripts/run-state.sh" set LT-000001 Status implement:in-progress > /dev/null
+bash "$scripts/run-state.sh" set GT-000901 Status implement:in-progress > /dev/null
 git switch -q main
 out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
 eq "" "$out" "no run on main"
-bash "$scripts/run-state.sh" set LT-000001 Status approach:in-progress > /dev/null
+bash "$scripts/run-state.sh" set GT-000901 Status approach:in-progress > /dev/null
 out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
-has "run LT-000001" "$out" "the only run before Implement, with no branch yet"
-bash "$scripts/run-state.sh" init LT-000002 > /dev/null
+has "run GT-000901" "$out" "the only run before Implement, with no branch yet"
+bash "$scripts/run-state.sh" init GT-000902 > /dev/null
 out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
 has "複数" "$out" "several runs before Implement: ask which"
-has "LT-000001 LT-000002" "$out" "both are listed"
-rm -rf .tixforge/LT-000002
-bash "$scripts/run-state.sh" set LT-000001 Status implement:in-progress > /dev/null
+has "GT-000901 GT-000902" "$out" "both are listed"
+rm -rf .tixforge/GT-000902
+bash "$scripts/run-state.sh" set GT-000901 Status implement:in-progress > /dev/null
 
 # --- statusline.sh ---------------------------------------------------------
 section="statusline.sh"
 sl() { printf '%s' "$1" | bash "$scripts/statusline.sh"; }
-git switch -q LT-000001-a
-eq "LT-000001 · implement:in-progress" "$(sl "{\"cwd\":\"$repo\"}")" "the run on this branch"
-eq "LT-000001 · implement:in-progress" "$(sl "{\"workspace\":{\"current_dir\":\"$repo\"}}")" "workspace.current_dir when there is no cwd"
+git switch -q GT-000901-a
+eq "GT-000901 · implement:in-progress" "$(sl "{\"cwd\":\"$repo\"}")" "the run on this branch"
+eq "GT-000901 · implement:in-progress" "$(sl "{\"workspace\":{\"current_dir\":\"$repo\"}}")" "workspace.current_dir when there is no cwd"
 mkdir -p sub
-eq "LT-000001 · implement:in-progress" "$(sl "{\"cwd\":\"$repo/sub\"}")" "from a subdirectory"
+eq "GT-000901 · implement:in-progress" "$(sl "{\"cwd\":\"$repo/sub\"}")" "from a subdirectory"
 rmdir sub
 git switch -q main
 eq "" "$(sl "{\"cwd\":\"$repo\"}")" "nothing on main with no run before Implement"
-bash "$scripts/run-state.sh" set LT-000001 Status plan:awaiting-approval > /dev/null
-eq "LT-000001 · plan:awaiting-approval" "$(sl "{\"cwd\":\"$repo\"}")" "the only run before Implement"
-bash "$scripts/run-state.sh" init LT-000002 > /dev/null
-eq "LT-000001 · plan:awaiting-approval (+1)" "$(sl "{\"cwd\":\"$repo\"}")" "several runs before Implement"
-rm -rf .tixforge/LT-000002
-bash "$scripts/run-state.sh" set LT-000001 Status implement:in-progress > /dev/null
+bash "$scripts/run-state.sh" set GT-000901 Status plan:awaiting-approval > /dev/null
+eq "GT-000901 · plan:awaiting-approval" "$(sl "{\"cwd\":\"$repo\"}")" "the only run before Implement"
+bash "$scripts/run-state.sh" init GT-000902 > /dev/null
+eq "GT-000901 · plan:awaiting-approval (+1)" "$(sl "{\"cwd\":\"$repo\"}")" "several runs before Implement"
+rm -rf .tixforge/GT-000902
+bash "$scripts/run-state.sh" set GT-000901 Status implement:in-progress > /dev/null
 eq "" "$(sl "{\"cwd\":\"$tmp\"}")" "nothing outside a repository"
 eq "" "$(sl '{}')" "nothing without a directory"
 eq "" "$(sl "{\"cwd\":\"$repo/missing\"}")" "nothing for a missing directory"
@@ -330,34 +334,34 @@ cp "$tmp/keep.yml" .tixforge/config.yml
 
 # --- review-input.sh -------------------------------------------------------
 section="review-input.sh"
-git switch -q LT-000001-a
+git switch -q GT-000901-a
 echo change > file.txt && git add file.txt && git commit -q -m change
-paths=$(bash "$scripts/review-input.sh" LT-000001 main)
+paths=$(bash "$scripts/review-input.sh" GT-000901 main)
 diff_file=$(printf '%s\n' "$paths" | sed -n 1p)
 has "+change" "$(cat "$diff_file")" "diff"
-has "/.git/tixforge/review/LT-000001/" "$diff_file" "outside .tixforge"
+has "/.git/tixforge/review/GT-000901/" "$diff_file" "outside .tixforge"
 eq 3 "$(printf '%s\n' "$paths" | grep -c .)" "three paths without --since"
 # --since writes the change after a given commit as delta.patch.
 since=$(git rev-parse HEAD)
 echo more > more.txt && git add more.txt && git commit -q -m more
-paths=$(bash "$scripts/review-input.sh" LT-000001 main --since "$since")
+paths=$(bash "$scripts/review-input.sh" GT-000901 main --since "$since")
 delta=$(printf '%s\n' "$paths" | sed -n 4p)
 has "delta.patch" "$delta" "delta path"
 has "+more" "$(cat "$delta")" "delta has the new change"
 case "$(cat "$delta")" in *"+change"*) ng "delta has only the new change" ;; *) ok ;; esac
 has "+change" "$(cat "$(printf '%s\n' "$paths" | sed -n 1p)")" "full diff still has everything"
-bash "$scripts/review-input.sh" LT-000001 main > /dev/null
+bash "$scripts/review-input.sh" GT-000901 main > /dev/null
 [ -f "$delta" ] && ng "delta removed without --since" || ok
-bash "$scripts/review-input.sh" LT-000001 main --since nope 2> /dev/null
+bash "$scripts/review-input.sh" GT-000901 main --since nope 2> /dev/null
 eq 2 $? "unknown --since commit"
 # A local base behind origin/<base>: others' commits there are not this run's.
 git switch -q main
 echo other > other.txt && git add other.txt && git commit -q -m other
 git update-ref refs/remotes/origin/main HEAD
 git reset -q --hard HEAD~1
-git switch -q LT-000001-a
+git switch -q GT-000901-a
 git merge -q --no-edit origin/main
-paths=$(bash "$scripts/review-input.sh" LT-000001 main)
+paths=$(bash "$scripts/review-input.sh" GT-000901 main)
 case "$(cat "$(printf '%s\n' "$paths" | sed -n 1p)")" in *"+other"*) ng "stale local base: others' commit excluded" ;; *) ok ;; esac
 has "+change" "$(cat "$(printf '%s\n' "$paths" | sed -n 1p)")" "stale local base: own change kept"
 git update-ref -d refs/remotes/origin/main

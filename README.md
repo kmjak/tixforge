@@ -4,13 +4,15 @@
 
 | スキル | 内容 |
 |--------|------|
-| `/tixforge:project` | `init`：プロジェクトを tixforge で使える状態にする。`update`：設定を変える・チケット管理を切り替える・テンプレートを最新にする |
+| `/tixforge:project` | `init`：プロジェクトを tixforge で使える状態にする。`update`：設定を変える・v2 の LT を issue に移す・テンプレートを最新にする |
 | `/tixforge:ticket` | `create`：チケットを対話で作る。`edit`：書き換える。`cancel`：キャンセル済みにする |
 | `/tixforge:dev` | `<id>`：6 フェーズで進める（再開も同じ）。`rewind <id>`：前のフェーズに戻す |
 
-典型的な流れ：`/tixforge:project init` → `/tixforge:ticket ログイン画面を作りたい` → `/tixforge:dev LT-000001`
+典型的な流れ：`/tixforge:project init` → `/tixforge:ticket ログイン画面を作りたい` → `/tixforge:dev GT-000001`
 
 どのスキルも明示起動専用（Claude が勝手に起動しない）。引数なしで起動すると、選択肢を出す。
+
+**GitHub が必須**：チケットは GitHub issue に、変更は PR にする。GitHub を使わないなら tixforge v2 を使う（v2 の `LT-` のチケットと `host: none` は、v3 では `/tixforge:project update` で移す）。
 
 ## 導入
 
@@ -29,7 +31,7 @@ plugin には、スキル 3 つ・Review 用の agent 2 つ（`tixforge:reviewer
 |------|------|-----|
 | `.tixforge/config.yml` | 設定（下記） | 管理する（チームで共有） |
 | `.tixforge/.gitignore` | `*`・`!.gitignore`・`!config.yml`。それ以外を git から外す（プロジェクトの `.gitignore` は触らない） | 管理する |
-| `.tixforge/<id>/ticket.md` | チケット（`LT-`：これが正本。`GT-`：issue の作業用コピー） | 管理しない |
+| `.tixforge/<id>/ticket.md` | チケットの issue の作業用コピー | 管理しない |
 | `.tixforge/<id>/state.md` | run の状態（Status・ブランチ・各フェーズの記録） | 管理しない |
 | `.tixforge/<id>/history/` | 前のフェーズに戻したときの古い記録 | 管理しない |
 | `docs/context/**` | サービス・ドメインの知識、commit 規約（`commit.md`） | 管理する |
@@ -44,9 +46,8 @@ commands:               # dev が検証で書いた順に実行する（無け�
   test: npm test
   lint: npm run lint
 ticket:
-  tracker: github       # create が作るチケット：github（GT-。issue と連携）| local（LT-。手元のみ）
+  tracker: github       # チケットの置き場。今は github だけ
 repository:
-  host: github          # github（PR を出す）| none（ローカルでマージする）
   base_branch: develop  # dev がブランチを切る元・PR の向き先
   close_issues: release # base_branch が GitHub の default branch と違うとき：release | merge
 review:
@@ -58,10 +59,9 @@ gates: [approach, plan, pr]  # 必ず止まるゲート（pr は常に止まる�
 
 ## チケット
 
-- **id**：ローカルのチケットは `LT-000001`、GitHub issue のチケットは `GT-000123`（issue #123）。チケットの扱いは id の接頭辞で決まり、`ticket.tracker` は create が次にどちらを作るかだけを決める（切り替えても既存のチケットはそのまま使える）。
-- **入力**：`gt-000123`（大文字小文字は問わない）・`#123`（issue 番号）・`123`（`ticket.tracker` に従う）。接頭辞付きで桁数が違う id（`GT-00123`）はエラーにして、0 を補わない（打ち間違いで別のチケットを指さないため）。
+- **id**：`GT-000123`（issue #123）。
+- **入力**：`gt-000123`（大文字小文字は問わない）・`#123`（issue 番号）・`123`（どちらも issue 番号）。接頭辞付きで桁数が違う id（`GT-00123`）はエラーにして、0 を補わない（打ち間違いで別のチケットを指さないため）。
 - **create**：中身はユーザーが書き、Claude は質問で引き出す（案を出すのは「考えて」と頼んだときだけ）。`/tixforge:ticket <作りたいもの>` のように文だけ渡してもよい。似たチケットがあれば示し、大きすぎれば分割を提案する。作った後は「開発を始める／別のチケットを作る／終わる」を選べる。
-- **ローカルのチケット（`LT-`）** は手元にしか無い（1 人・1 台で使う前提）。GitHub に PR を出すときは、受け入れ条件が PR 本文に転記される。public リポジトリで「コードは公開、計画は手元」にしたいときにも使える。
 - **既定と違うブランチから作る**チケット（hotfix など）は、チケットに `## Base` の節を書く。
 
 ## dev の 6 フェーズ
@@ -73,7 +73,7 @@ gates: [approach, plan, pr]  # 必ず止まるゲート（pr は常に止まる�
 | 3 | Plan | Base・ブランチ・**受け入れ条件 → 確かめ方の対応表**・commit 分割。確かめ方の種別（自動／Claude（ブラウザ）／Claude（API）／ユーザー）は項目ごとにユーザーが選ぶ。Plan は常に止まる |
 | 4 | Implement | 計画どおりに実装・commit し、検証コマンド（`verify.sh`）と手動確認を通す。context と矛盾しないかもここで確かめる |
 | 5 | Review | 2 つの reviewer agent を並列に起動する。`tixforge:reviewer` は合意とのズレ（相違・未実装・合意外の変更・決定の無い未決事項）、`tixforge:quality-reviewer` は品質を見る。2 ラウンド目からは前のラウンドからの差分と、直すと決めた指摘が直ったかを見る。指摘ごとに修正・計画の見直し・方針の見直し・受け入れをユーザーが選ぶ |
-| 6 | PR | 明示的な確認の後にだけ push して PR を出し、レビュー・CI を見届ける（tixforge はマージしない）。`host: none` では、確認の後に Base へローカルでマージする |
+| 6 | PR | 明示的な確認の後にだけ push して PR を出し、レビュー・CI を見届ける（tixforge はマージしない） |
 
 - **ゲート**：`gates` にあるフェーズでは必ず止まる。無いフェーズは、止まる条件（未決事項・ユーザーの判断・対処が決まっていない指摘など）が無ければ自動で通過する。PR の前は常に止まる。止まった所が再開点になる。
 - **Status**：`<phase>:in-progress`・`<phase>:awaiting-approval`、PR 後は `pr:awaiting-review`・`pr:ready-to-merge`（Approve・CI・コンフリクトの条件を満たしマージ待ち）。`done` はマージされたときだけ。
@@ -138,7 +138,7 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 Claude Code の画面の下に、今いる場所の run と Status を出せる（任意。plugin を入れただけでは出ない）。
 
 ```
-LT-000001 · plan:awaiting-approval
+GT-000001 · plan:awaiting-approval
 ```
 
 今のブランチの run を出す。どの run のブランチでもなければ、Plan の承認前の run（まだブランチが無い）を出し、複数あれば先頭の 1 つに `(+<残りの数>)` を付ける。run が無い場所では何も出さない。

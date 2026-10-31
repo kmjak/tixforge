@@ -1,6 +1,6 @@
 # GitHub：Actions（任意）
 
-`project init` で、`tracker: github` のときに読む。ローカルの tixforge は誰かが実行したときにしか動かないので、サーバー側で次の workflow を動かす。雛形は `<plugin>/templates/github/`。選ばれたものを `.github/workflows/` にそのままコピーする（内容は変えない）。
+`project init` で読む。ローカルの tixforge は誰かが実行したときにしか動かないので、サーバー側で次の workflow を動かす。雛形は `<plugin>/templates/github/`。選ばれたものを `.github/workflows/` にそのままコピーする（内容は変えない）。
 
 | workflow | 起動 | 内容 |
 |----------|------|------|
