@@ -737,6 +737,20 @@ eq "" "$(st migrate --check GT-000102)" "nothing left to migrate"
 st rewind GT-000102 plan > /dev/null && ok || ng "rewind a migrated file"
 eq "Research|Approach|Plan|Implementation Log|Review|PR" \
   "$(sed -n 's/^## //p' "$f2" | paste -sd'|' -)" "the six sections stay, in order"
+# A table of a section's own with a Format row is not the header's.
+cp "$tmp/v2-state.md" "$f2"
+printf '| Format | 説明 |\n|---|---|\n| Format | JSON |\n' >> "$f2"
+eq "format 2 -> 3" "$(st migrate --check GT-000102 | sed -n 1p)" "a Format row in a section is not the format"
+# All sections written: no placeholders to remove, so no line for them.
+grep -v '^<!-- Phase' "$tmp/v2-state.md" > "$f2"
+eq "$(printf 'format 2 -> 3\n- add the Format row')" "$(st migrate --check GT-000102)" \
+  "migrate --check: no line for zero placeholders"
+# A done or canceled run goes no further: --check asks for nothing.
+for s in done canceled; do
+  sed "s/implement:in-progress /$(printf '%-22s' "$s")/" "$tmp/v2-state.md" > "$f2"
+  eq "$s" "$(st get GT-000102)" "a $s v2 file"
+  eq "" "$(st migrate --check GT-000102)" "migrate --check: nothing for a $s run"
+done
 # Only v2's own comment lines go: the user's comments, and a placeholder
 # quoted in a fence, stay.
 {

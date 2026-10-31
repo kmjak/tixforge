@@ -16,8 +16,10 @@
 # The Format row of the header is the version of the file's layout (none:
 # 2, what v2 wrote). init writes the current one; migrate moves an older
 # file up, and --check only prints what it would change (nothing when the
-# file is current). Only init and migrate write Format. Raise STATE_FORMAT,
-# and teach migrate the step, whenever a change makes the old layout wrong.
+# file is current, or when the run is done or canceled: it goes no further,
+# so it needs no change). Only init and migrate write Format. Raise
+# STATE_FORMAT, and teach migrate the step, whenever a change makes the old
+# layout wrong.
 #
 # rewind moves the sections of the target phase and every later phase into
 # .tixforge/<id>/history/<time>.md (so they are not read as approved any
@@ -88,10 +90,15 @@ V2_PLACEHOLDERS='<!-- Phase 1: organized understanding of the ticket + relevant 
 <!-- Phase 5: reviewer findings as rounds, with recommendations and decisions -->
 <!-- Phase 6: title, target branch, URL, review outcome -->'
 
-# format_of <file>: the Format row, or 2 when there is none.
+# format_of <file>: the Format row of the header table, or 2 when there is
+# none. Only the first table is read: a section may have a table of its own
+# with a Format row.
 format_of() {
   local v
-  v=$(field "$1" Format)
+  v=$(awk -F'|' '/^\|/ { t = 1; key = $2; gsub(/^[ \t]+|[ \t]+$/, "", key)
+      if (key == "Format") { v = $3; gsub(/^[ \t]+|[ \t]+$/, "", v); print v; exit }
+      next }
+    t { exit }' "$1")
   printf '%s\n' "${v:-2}"
 }
 
@@ -298,8 +305,10 @@ case $cmd in
     [ "$from" -eq "$STATE_FORMAT" ] && exit 0
     # Format 2 -> 3 is the only step so far.
     if [ -n "$check" ]; then
+      case $(field "$f" Status) in done | canceled) exit 0 ;; esac
       printf 'format %s -> %s\n' "$from" "$STATE_FORMAT"
-      printf -- '- remove the placeholder comments (%s)\n' "$(v2_step "$f" count)"
+      n=$(v2_step "$f" count)
+      [ "$n" -gt 0 ] && printf -- '- remove the placeholder comments (%s)\n' "$n"
       printf -- '- add the Format row\n'
       exit 0
     fi
