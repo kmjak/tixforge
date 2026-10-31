@@ -20,6 +20,7 @@
 
 0. **キャンセル済みのチケット**（`LT-` でチケットに `Status: canceled`、`GT-` で `closed_as: canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
 1. **状態ファイル `.tixforge/<ticket-id>/state.md` が存在する**場合：読んで `Status` から再開する。
+   - 読む前に `bash <scripts>/run-state.sh migrate --check <ticket-id>` を実行する。何か出たら（前の版の tixforge が作った state.md）、変わる内容を示し、今の形式に更新するか尋ねる。書いた本文と `Status` は変わらないこと、更新しなくても続けられることも伝える。更新するなら `bash <scripts>/run-state.sh migrate <ticket-id>`。終了コード 5（今の tixforge より新しい形式）なら、plugin を更新するよう伝えて止まる。
    - `<phase>:awaiting-approval`（`pr` 以外）→ そのフェーズの要約とゲートを再提示し、停止して待つ。
    - `<phase>:in-progress`（`pr` 以外）→ そこまで書かれたセクションを読み直し（Implement ならブランチの `git log` / `git status` も確認）、そのフェーズを継続する。途中成果が信頼できずにやり直したいときは、**やり直す前に**、捨てることになるもの（commit の一覧など）を示して尋ねる（伝えるだけにしない）。フェーズを戻すなら `rewind.md` の手順で行う。
    - `pr:*` → `<plugin>/skills/dev/pr.md` を Read し、その「再開」に従う。
@@ -34,7 +35,7 @@
 
 このファイルを run の単一の真実とする。
 
-- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は `GT-` の id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
+- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は `GT-` の id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
 - **セクション**（`## Research`・`## Approach`・`## Plan`・`## Implementation Log`・`## Review`・`## PR`）は各フェーズが Edit で書く。本文はドキュメント言語、見出しは英語の固定キーのまま変えない（このスキルが参照・再開に使うため）。
 - フェーズのセクションを書いたら、**続けて** `Status` を更新する（セクション → Status の順。逆にすると、中断したときに空のセクションのまま承認待ちになる）。
 - 承認を受けて（またはゲートを自動で通過して）次のフェーズへ進むときは、作業を始める前に `Status` を `<次のphase>:in-progress` にする。

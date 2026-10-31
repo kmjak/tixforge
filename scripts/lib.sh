@@ -127,7 +127,8 @@ cfg_list() {
   ' "$file"
 }
 
-# The sections of state.md, in phase order. A section starts only at one of
+# The sections of state.md, in phase order. They start empty; the body is
+# written in the document language (skills/dev/run.md). A section starts only at one of
 # these six headings, and not inside a ``` / ~~~ fence: an Approach may quote
 # Markdown that has "## " lines of its own. _section_awk defines
 # heading_index(line) for awk programs: 1..6 for a section heading, else 0.

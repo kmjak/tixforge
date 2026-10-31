@@ -158,6 +158,11 @@ eq 3 $? "init twice"
 st init T000001 2> /dev/null
 eq 2 $? "not a ticket id"
 eq research:in-progress "$(st get LT-000001)" "initial Status"
+eq 3 "$(st get LT-000001 Format)" "init writes the current Format"
+eq "Research|Approach|Plan|Implementation Log|Review|PR" \
+  "$(sed -n 's/^## //p' .tixforge/LT-000001/state.md | paste -sd'|' -)" "init writes the six sections in order"
+eq 0 "$(grep -c '<!--' .tixforge/LT-000001/state.md)" "the sections start empty"
+eq "" "$(st migrate --check LT-000001)" "migrate --check: nothing for a current file"
 st set LT-000001 Issue '#1' 2> /dev/null
 eq 2 $? "Issue is not a header field"
 git branch LT-000001-a
@@ -671,6 +676,55 @@ pr OPEN MERGEABLE "" '[]' '[]'
 has "ci: none" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "no checks detail"
 pr OPEN MERGEABLE "" '[]' "$ok_check"
 has "ci: success" "$(TF_PR_JSON="$tmp/pr.json" bash "$scripts/pr-status.sh" x)" "checks detail"
+
+# --- v2 data ---------------------------------------------------------------
+# What v2 left in users' repositories (tests/fixtures/v2). The plugin update
+# does not rewrite it.
+section="v2 data"
+v2="$here/fixtures/v2"
+f2=.tixforge/GT-000102/state.md
+mkdir -p .tixforge/GT-000102
+cp "$v2/state-implement.md" "$f2"
+eq "$(printf 'format 2 -> 3\n- remove the placeholder comments (3)\n- add the Format row')" \
+  "$(st migrate --check GT-000102)" "migrate --check lists the changes"
+cmp -s "$v2/state-implement.md" "$f2" && ok || ng "--check does not write"
+eq implement:in-progress "$(st get GT-000102)" "a v2 file is read as it is"
+eq "format 2 -> 3: $f2" "$(st migrate GT-000102)" "migrate"
+eq 3 "$(st get GT-000102 Format)" "migrate writes the Format"
+has "| Format  | 3" "$(grep -A1 '^| Updated' "$f2" | sed -n 2p)" "the Format row ends the header table"
+eq 0 "$(grep -c '<!--' "$f2")" "migrate removes the placeholders"
+eq "$(grep -v '^<!-- Phase' "$v2/state-implement.md")" "$(grep -v '^| Format ' "$f2")" \
+  "migrate changes nothing else (sections, Status, Updated)"
+eq "" "$(st migrate --check GT-000102)" "nothing left to migrate"
+st rewind GT-000102 plan > /dev/null && ok || ng "rewind a migrated file"
+eq "Research|Approach|Plan|Implementation Log|Review|PR" \
+  "$(sed -n 's/^## //p' "$f2" | paste -sd'|' -)" "the six sections stay, in order"
+# Only v2's own comment lines go: the user's comments, and a placeholder
+# quoted in a fence, stay.
+{
+  sed -n '1,/^## Research/p' "$v2/state-implement.md"
+  printf '<!-- my note -->\n```\n<!-- Phase 2: chosen implementation approach and key design decisions -->\n```\n'
+  sed -n '/^## Research/,$p' "$v2/state-implement.md" | sed 1d
+} > "$f2"
+st migrate GT-000102 > /dev/null
+has "<!-- my note -->" "$(cat "$f2")" "a comment of the user's is kept"
+eq 1 "$(grep -c '^<!-- Phase 2' "$f2")" "a fenced placeholder is kept"
+sed 's/^| Format  | 3 /| Format  | 9 /' "$f2" > "$tmp/f9" && cat "$tmp/f9" > "$f2"
+st migrate --check GT-000102 2> /dev/null
+eq 5 $? "a newer format: update the plugin"
+sed 's/^| Format  | 9 /| Format  | x /' "$f2" > "$tmp/f9" && cat "$tmp/f9" > "$f2"
+st migrate GT-000102 2> /dev/null
+eq 2 $? "a Format that is not a number"
+rm -rf .tixforge/GT-000102
+
+# GitHub comments are not migrated: v2's English ones keep being read, with
+# the labels taken off.
+cp "$v2/issue-closed.json" "$GH_DIR/issue-201.json"
+cp "$v2/issue-closed-sync.json" "$GH_DIR/issue-202.json"
+cp "$v2/issue-canceled.json" "$GH_DIR/issue-203.json"
+eq "closed_as: completed" "$(is check 201 | sed -n 2p)" "closed by tixforge"
+eq "closed_as: completed" "$(is check 202 | sed -n 2p)" "closed by tixforge-issue-sync"
+eq "closed_as: canceled" "$(is check 203 | sed -n 2p)" "canceled by tixforge"
 
 echo "scripts: $pass passed, $fail failed"
 [ $fail -eq 0 ]
