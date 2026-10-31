@@ -20,11 +20,11 @@
 
 0. **キャンセル済みのチケット**（`LT-` でチケットに `Status: canceled`、`GT-` で `closed_as: canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
 1. **状態ファイル `.tixforge/<ticket-id>/state.md` が存在する**場合：読んで `Status` から再開する。
-   - 読む前に `bash <scripts>/run-state.sh migrate --check <ticket-id>` を実行する。何か出たら（前の版の tixforge が作った state.md）、変わる内容を示し、AskUserQuestion でどうするか選んでもらう。今の形式でない state.md のまま先に進めない。
-     - **更新する** — `bash <scripts>/run-state.sh migrate <ticket-id>`。書いた本文と `Status` は変わらない。
-     - **run を消して最初から** — `.tixforge/<ticket-id>/state.md` と `history/` を削除し、下の 2 から始める。チケットとブランチ・commit は残る（ブランチを使い直すかは Plan で決める）。
+   - 読む前に `bash <scripts>/run-state.sh migrate --check <ticket-id>` を実行する。何か出たら、変わる内容を示し、AskUserQuestion で次から選ばせる。今の形式でない state.md のまま先に進めない。
+     - **更新する**（説明：書いた本文と `Status` はそのまま）— `bash <scripts>/run-state.sh migrate <ticket-id>`
+     - **run を消して最初から** — `.tixforge/<ticket-id>/state.md` と `history/` を削除し、下の 2 から始める。チケット・ブランチ・commit は消さない。
      - **中断する** — 何も変えずに止まる。
-     - 終了コード 5（今の tixforge より新しい形式）なら、選ばせずに、plugin を更新するよう伝えて止まる。
+     - 終了コード 5 なら、選ばせずに、plugin を更新するよう伝えて止まる。
    - `<phase>:awaiting-approval`（`pr` 以外）→ そのフェーズの要約とゲートを再提示し、停止して待つ。
    - `<phase>:in-progress`（`pr` 以外）→ そこまで書かれたセクションを読み直し（Implement ならブランチの `git log` / `git status` も確認）、そのフェーズを継続する。途中成果が信頼できずにやり直したいときは、**やり直す前に**、捨てることになるもの（commit の一覧など）を示して尋ねる（伝えるだけにしない）。フェーズを戻すなら `rewind.md` の手順で行う。
    - `pr:*` → `<plugin>/skills/dev/pr.md` を Read し、その「再開」に従う。
