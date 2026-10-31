@@ -23,7 +23,6 @@ if [ -f "$conf" ]; then
   [ -z "$gates" ] && cfg_has gates "$conf" && gates="[]（pr のみ）"
   echo "- 設定（.tixforge/config.yml）: language=$(cfg language "$conf")" \
     "tracker=$(cfg ticket.tracker "$conf")" \
-    "host=$(cfg repository.host "$conf")" \
     "base_branch=$(cfg repository.base_branch "$conf")" \
     "close_issues=$(cfg repository.close_issues "$conf")" \
     "review.required=$(cfg review.required "$conf")" \
@@ -31,6 +30,22 @@ if [ -f "$conf" ]; then
 else
   echo "- .tixforge/config.yml が無い（/tixforge:project init が未実行）"
 fi
+
+# What v2 left: local tickets (LT-), tracker: local and host: none. v3 keeps
+# tickets in GitHub issues only, so they have to move first
+# (/tixforge:project update).
+# A canceled ticket (moved, or dropped) and a done run need nothing.
+lts=""
+for d in "$(tf_dir "$top")"/LT-*; do
+  [ -d "$d" ] || continue
+  grep -q '^Status: canceled' "$d/ticket.md" 2> /dev/null && continue
+  [ -f "$d/state.md" ] && case $(field "$d/state.md" Status) in done | canceled) continue ;; esac
+  lts="${lts:+$lts }${d##*/}"
+done
+[ -f "$conf" ] && [ "$(cfg ticket.tracker "$conf")" = local ] && lts="tracker: local${lts:+ / $lts}"
+[ -n "$lts" ] && echo "- 移行が要る: ${lts}（v3 は LT を使えない。/tixforge:project update で issue に移す）"
+[ -f "$conf" ] && [ "$(cfg repository.host "$conf")" = none ] \
+  && echo "- 移行が要る: repository.host: none（v3 は GitHub が必須。GitHub のリポジトリを使うなら /tixforge:project update で移す。使わないなら tixforge v2 に留まる）"
 
 open=""
 for f in "$(tf_dir "$top")"/*/state.md; do

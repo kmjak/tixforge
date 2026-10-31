@@ -8,8 +8,7 @@ tf_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
 # Everything tixforge keeps in a project lives under .tixforge/:
 #   .tixforge/config.yml        settings (in git, shared)
 #   .tixforge/.gitignore        keeps everything else out of git
-#   .tixforge/<id>/ticket.md    a ticket (LT: the ticket itself; GT: a working
-#                               copy of the issue)
+#   .tixforge/<id>/ticket.md    a working copy of the ticket's issue
 #   .tixforge/<id>/state.md     the run of that ticket
 tf_dir() { printf '%s/.tixforge\n' "${1:-$(tf_top)}"; }
 tf_config() { printf '%s/config.yml\n' "$(tf_dir "${1:-}")"; }
@@ -25,12 +24,13 @@ ensure_workspace() {
   [ -f "$d/.gitignore" ] || printf '*\n!.gitignore\n!config.yml\n' > "$d/.gitignore"
 }
 
-# Ticket ids: LT-<6 digits> for local tickets, GT-<6 digits> for GitHub
-# issues (GT-000123 is issue #123). More than 6 digits are written as is.
+# Ticket ids: GT-<6 digits> for GitHub issues (GT-000123 is issue #123).
+# More than 6 digits are written as is. is_ticket_id also takes LT- (v2's
+# local tickets) so that /tixforge:project update can close their runs;
+# ticket-id.sh normalize refuses LT-.
 # shellcheck disable=SC2034 # used by ticket-id.sh
 ID_PAD=6
 is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^(LT|GT)-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
-id_kind() { printf '%s\n' "${1%%-*}"; } # LT | GT
 # issue_of <id>: the issue number of a GT id, or nothing.
 issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac }
 

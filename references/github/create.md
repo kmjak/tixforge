@@ -1,6 +1,6 @@
 # GitHub：issue を作る・取り込む
 
-`tracker: github` の create で読む。
+create で読む。
 
 - **事前チェック**：`bash <scripts>/github-preflight.sh`。`ok:` 以外なら、出力をそのまま示して止まる。
 - issue の本文にはチケットの全セクション（背景・要件・受け入れ条件・対象外・未決事項）と、tixforge が書いたことを確かめるハッシュが載る。本文とタイトルは GitHub 上で直接編集せず、`/tixforge:ticket edit` で変える（本文の冒頭で告知される）。
