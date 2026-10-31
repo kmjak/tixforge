@@ -10,7 +10,7 @@
 **状態ファイルの形式**（最初に行う）：`.tixforge/<ticket-id>/state.md` があれば `bash <scripts>/run-state.sh migrate --check <ticket-id>` を実行する。何か出たら、変わる内容を示し、AskUserQuestion で次から選ばせる。今の形式でない state.md のまま先に進めない。
 
 - **更新する**（説明：書いた本文と `Status` はそのまま）— `bash <scripts>/run-state.sh migrate <ticket-id>`
-- **run を消して最初から** — `.tixforge/<ticket-id>/state.md` と `history/` を削除し、新規として進める。チケット・ブランチ・commit は消さない。Plan でブランチを決めるとき、古いブランチが残っていることを示し、使い直すか新しく切るかを尋ねる。
+- **run を消して最初から** — `.tixforge/<ticket-id>/state.md` と `history/` を削除し、新規として進める。チケット・ブランチ・commit は消さない。
 - **中断する** — 何も変えずに止まる。
 
 終了コード 5 なら、選ばせずに、plugin を更新するよう伝えて止まる。それ以外のエラーなら、出力を示して止まる。
