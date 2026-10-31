@@ -242,6 +242,9 @@ printf '| Field | Value |\n|---|---|\n| Status | plan:awaiting-approval |\n| Upd
 has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "a local run in progress"
 bash "$scripts/run-state.sh" set LT-000003 Status canceled > /dev/null && ok || ng "run-state set on a local run"
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
+printf '| Field | Value |\n|---|---|\n| Status | pr:awaiting-review |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
+bash "$scripts/run-state.sh" set LT-000003 Status done > /dev/null && ok || ng "a local run with a PR is finished by hand"
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
 rm -rf .tixforge/LT-000003
 sed 's/tracker: github/tracker: local/' "$tmp/keep-gates.yml" > .tixforge/config.yml
 has "移行が要る: tracker: local（" "$(bash "$scripts/project-status.sh")" "tracker: local"

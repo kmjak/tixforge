@@ -29,7 +29,7 @@
 | そのチケットが実在するか | `bash <scripts>/ticket-id.sh exists <id>` → `issue`・`pull-request`（その番号は PR）・`none` |
 | id → issue 番号 | `bash <scripts>/ticket-id.sh number <GT-id>` |
 
-- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。
+- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。`detect` の `invalid: <語>` は、`bash <scripts>/ticket-id.sh normalize <語>` を実行してそのエラーを示す。
 - 取り違えを防ぐため、dev・edit・cancel は始めるときに「`<id>`：<チケットのタイトル>」を必ずユーザーに示す。
 
 | 用途 | パス |

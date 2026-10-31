@@ -26,10 +26,11 @@ v3 は GitHub が必須で、チケットを issue にだけ置く。v2 の `LT-
 
 1. `bash <scripts>/github-preflight.sh`。`ok:` 以外なら出力を示し、済ませてもらってから確かめ直す（remote が無いなら init の「リポジトリ」の手順で用意する）。GitHub のリポジトリを使わないなら、tixforge v2 に留まるよう伝えて止まる。
 2. init の「チケット管理」（ラベル・issue フォーム）と「GitHub Actions」を行う。
-3. 移すもの（`.tixforge/LT-*/` のうち、`ticket.md` に `Status: canceled` が無く、`state.md` が無いか `Status` が `done`・`canceled` 以外のもの）を一覧で示し、1 枚ずつ「issue にする」「やめる」を尋ねる。`state.md` で run が進行中のものは、移すと新しい `GT-` の id で dev を始め直すことになると添える。
-   - **issue にする** — `references/github/create.md` を Read し、`bash <scripts>/issue-sync.sh create <LT- の ticket.md>` を実行する。元の `ticket.md` のタイトル行の下に `Status: canceled` と `Reason: <GT-id> に移した` の 2 行を足す。
-   - **やめる** — 元の `ticket.md` のタイトル行の下に `Status: canceled` と `Reason: <理由>` の 2 行を足す（理由を 1 行で尋ねる）。
-   - どちらでも、`state.md` があれば `bash <scripts>/run-state.sh set <LT-id> Status canceled` を実行する。
+3. 移すもの（`.tixforge/LT-*/` のうち、`ticket.md` に `Status: canceled` が無く、`state.md` が無いか `Status` が `done`・`canceled` 以外のもの）を一覧で示し、1 枚ずつ次から尋ねる。`state.md` で run が進行中のものは、issue にすると新しい `GT-` の id で dev を始め直すことになると添える。
+   - **issue にする**（`ticket.md` があるときだけ出す）— `references/github/create.md` を Read し、`bash <scripts>/issue-sync.sh create <LT- の ticket.md>` を実行する。元の `ticket.md` のタイトル行の下に `Status: canceled` と `Reason: <GT-id> に移した` の 2 行を足す。
+   - **やめる** — `ticket.md` があれば、タイトル行の下に `Status: canceled` と `Reason: <理由>` の 2 行を足す（理由を 1 行で尋ねる）。
+   - **issue にせず、PR を手で終える**（`state.md` の `Status` が `pr:*` のときだけ出す）— `## PR` の PR の URL を示し、マージかクローズは GitHub で行うよう伝える。`bash <scripts>/run-state.sh set <LT-id> Status done` を実行する。
+   - 「issue にする」「やめる」では、`state.md` があれば `bash <scripts>/run-state.sh set <LT-id> Status canceled` を実行する。
 4. `ticket.tracker` が `local` なら `github` に書き換え、`repository.host` のキーがあれば消す。`host: none` だったなら、init の「レビューの要否」（人数を尋ねる）・「PR テンプレート」・「CI」も行う。
 5. `bash <scripts>/project-status.sh` を実行し、「移行が要る」が出なくなったことを確かめる。
 
