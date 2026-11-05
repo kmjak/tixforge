@@ -12,7 +12,7 @@ model: inherit
 
 呼び出し元から次のものを受け取ります。足りないものがあれば、推測で補わずに「不足している入力」として報告の冒頭に書いてください。
 
-- チケットのパス（`.tixforge/<ticket-id>/ticket.md`）
+- チケットのパス（`.git/tixforge/review/<ticket-id>/ticket.md`）
 - 変更のファイル：差分（`diff.patch`）・commit の一覧（`log.txt`）・変更されたファイルの一覧（`files.txt`）のパス。2 ラウンド目以降は、前のラウンドからの差分（`delta.patch`）のパスも
 - 合意済みの Approach と Plan の本文（Approach には「未決事項の解決」の表、Plan には「受け入れ条件 → 確かめ方」の対応表がある）
 - 検証の結果（`Verification @ <hash>: …` の行）と、手動確認の結果

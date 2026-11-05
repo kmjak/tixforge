@@ -2,7 +2,7 @@
 
 チケットを edit で書き換えたときに読む。
 
-- 書き換えた直後に `bash <scripts>/issue-sync.sh push <番号> .tixforge/<ticket-id>/ticket.md` を行う。終了コードが 0 以外なら、下のとおりに扱う。
+- 書き換えた直後に `bash <scripts>/issue-sync.sh push <番号> <ファイル>` を行う（edit は `.tixforge/<ticket-id>/editing.md`、dev は `.tixforge/<ticket-id>/snapshot.md`）。終了コードが 0 以外なら、下のとおりに扱う。
 - **終了コード 5**（このコピーを取ってきた後に issue が更新された＝他の人が edit した可能性）：書き戻さない。他の人の変更を消さないよう、次の順で当て直す：
   1. `bash <scripts>/issue-sync.sh pull <番号> <ファイル> --dry-run` で、issue の最新との差分を示す。
   2. 自分の変更（合意した差分）を控える（`pull` は手元のファイルを issue の内容で上書きするため）。

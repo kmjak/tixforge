@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# GitHub tickets (GT-<n>) and their issues. The issue is the source of truth;
-# .tixforge/<id>/ticket.md is a working copy that is not in git and is
-# rebuilt from the issue. See references/github/.
+# GitHub tickets (GT-<n>) and their issues. The issue is the source of truth.
+# A ticket file is a copy of it, not in git: dev keeps the version it took in
+# .tixforge/<id>/snapshot.md, edit works on .tixforge/<id>/editing.md and
+# removes it after writing back. See references/github/.
 #
-#   issue-sync.sh create <draft-file>                     create the issue (tixforge:todo) and its working copy
+#   issue-sync.sh create <draft-file>                     create the issue (tixforge:todo); no local copy
 #   issue-sync.sh check <number> [<ticket-file>]          sync verdict, how the issue was closed, details
 #   issue-sync.sh pull <number> <ticket-file> [--accept-edited] [--dry-run]
 #                                                         rebuild the working copy from the issue; prints the diff
@@ -30,13 +31,14 @@
 #               other way, with GitHub's reason)
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
-# pull records the hash it saw in <dir>/.issue-hash; push refuses (exit 5)
-# when the issue's hash has changed since, i.e. someone else pushed an edit
-# after this copy was fetched. create prints number, url, id and file.
+# pull records the hash it saw next to the file (.<name>.hash); push refuses
+# (exit 5) when the issue's hash has changed since, i.e. someone else pushed
+# an edit after this copy was fetched. create prints number, url and id.
 # push --keep-original first posts the current body as a comment (adopt).
 #
 # Exit: 0 ok, 2 usage, 3 no markers, 4 edited on GitHub, 5 changed since
-#       fetched, 6 the ticket folder already exists (create), other: gh failed.
+#       fetched, 6 the ticket folder already exists (create: the issue was
+#       made, the folder was left alone), other: gh failed.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=SCRIPTDIR/lib.sh
@@ -161,7 +163,7 @@ closed_as() {
   echo unexpected
 }
 
-hashfile() { printf '%s/.issue-hash\n' "$(dirname "$1")"; }
+hashfile() { printf '%s/.%s.hash\n' "$(dirname "$1")" "$(basename "$1")"; }
 
 # write_copy <file> <id> <title> <ticket-body-file>
 write_copy() {
@@ -189,19 +191,13 @@ case $cmd in
     url=$(printf '%s\n' "$url" | grep -Eo 'https://[^[:space:]]+/issues/[0-9]+' | tail -1)
     n=${url##*/}
     id="GT-$(printf '%06d' "$n")"
-    file=$(ticket_file "$id")
     echo "number: $n"
     echo "url: $url"
     echo "id: $id"
-    if [ -e "$(dirname "$file")" ]; then
-      echo "the folder of $id already exists: $(dirname "$file")（手元のコピーは作っていない）" >&2
+    if [ -e "$(tf_dir)/$id" ]; then
+      echo "the folder of $id already exists: $(tf_dir)/$id" >&2
       exit 6
     fi
-    ensure_workspace
-    mkdir -p "$(dirname "$file")"
-    write_copy "$file" "$id" "$t" "$tmpd/ticket"
-    bash "$hash_sh" hash "$t" < "$tmpd/ticket" > "$(hashfile "$file")"
-    echo "file: ${file#$(tf_top)/}"
     ;;
 
   check)

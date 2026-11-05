@@ -4,7 +4,7 @@
 
 1. **準備**：引数のチケット id を `bash <scripts>/ticket-id.sh normalize <引数>` で正規化する（無ければ尋ねる）。`references/github/fetch.md`・`close.md`・`record.md` を Read する。
 2. **チケットを読む**：
-   - `fetch.md` の手順で issue からチケットを取ってくる。閉じていればチケットの状態に従う（`canceled`：キャンセル済みとして止まる。`completed`・`closed-completed`：完了済みなので拒否する。`closed-not-planned`：キャンセルとして記録し直すか尋ね、そうするなら下の「行うこと」を、`close.md` のとおり閉じる操作を省いて進める。`closed`：状況を示してどうするか尋ねる）。
+   - `fetch.md` の手順 1〜3 で状況を見る（手元のファイルは作らない。タイトルは `check` の `title:`）。閉じていればチケットの状態に従う（`canceled`：キャンセル済みとして止まる。`completed`・`closed-completed`：完了済みなので拒否する。`closed-not-planned`：キャンセルとして記録し直すか尋ね、そうするなら下の「行うこと」を、`close.md` のとおり閉じる操作を省いて進める。`closed`：状況を示してどうするか尋ねる）。
    - 読んだら「`<ticket-id>`：<タイトル>」を示す（取り違えの防止）。
    - `.tixforge/<ticket-id>/state.md` の `Status` が `done` なら拒否する（完了済みの作業は取り消さない）。
    - 状態が `merged` なら拒否する（Base にマージ済みでリリース待ち。チケットが開いていて state.md が手元に無くても、完了した作業）。`in-review` なら、PR が出ていることを示して続けるか尋ねる。

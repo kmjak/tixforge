@@ -2,7 +2,7 @@
 # The tixforge run state file, .tixforge/<id>/state.md: creates it and reads
 # or writes its header table. Sections are written by Claude with Edit; this
 # script owns the header so Status and Updated never drift apart. The ticket
-# is .tixforge/<id>/ticket.md and a GT id carries its issue number, so the
+# is .tixforge/<id>/snapshot.md and a GT id carries its issue number, so the
 # header does not repeat them.
 #
 #   run-state.sh init <id>                   create state.md (Status research:in-progress)
