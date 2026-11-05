@@ -74,7 +74,7 @@ done <<< "$refs"
 # "チケットの操作"); what they do on GitHub issues is written only in
 # references/github/. PRs (gh pr) are the code host's, not the ticket's.
 section="tracker operations"
-hits=$(grep -nE 'closed_as|state_reason|issue-label\.sh|issue-sync\.sh (push|pull|create)|gh issue|Closes #|tixforge:(todo|in-progress|in-review|merged|done|canceled|out-of-sync)' \
+hits=$(grep -nE 'closed_as|state_reason|stateReason|NOT_PLANNED|issue-label\.sh|issue-sync\.sh (push|pull|create|adopt)|gh issue|(Closes|Fixes|Resolves) #|tixforge:(todo|in-progress|in-review|merged|done|canceled|out-of-sync|hash|ticket:)' \
   skills/dev/*.md skills/ticket/*.md | grep -v '^[^:]*:[0-9]*:allowed-tools:')
 [ -z "$hits" ] && ok || ng "issue details in skills/dev or skills/ticket (use the operation names):
 $hits"

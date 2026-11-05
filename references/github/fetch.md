@@ -21,7 +21,7 @@
 
 ## 探す
 
-- **着手できるチケット**（dev の候補）：`gh issue list --state open --label tixforge:todo --json number,title`。
-- **開いているチケット**（edit の候補）：`gh issue list --state open --json number,title,labels` のうち、`tixforge:` で始まるラベルがあるもの。
-- **似たチケット**（create）：`gh issue list --state open --search "<タイトルの語> in:title" --json number,title`。
+- **着手できるチケット**（dev の候補）：`gh issue list --state open --label tixforge:todo --limit 100 --json number,title`。
+- **開いているチケット**（edit の候補）：`gh issue list --state open --limit 100 --json number,title,labels` のうち、`tixforge:` で始まるラベルがあるもの。
+- **似たチケット**（create）：`gh issue list --state open --search "<タイトルの語> in:title" --limit 100 --json number,title`。
 - 番号は `bash <scripts>/ticket-id.sh normalize '#<番号>'` で id にして示す。

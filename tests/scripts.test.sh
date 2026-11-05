@@ -663,6 +663,13 @@ issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:in-review"}]'
 eq in-review "$(st45)" "status: in-review"
 issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:merged"}]'
 eq merged "$(st45)" "status: merged, waiting for the release"
+issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:in-review"},{"name":"tixforge:merged"}]'
+eq merged "$(st45)" "status: merged wins over in-review"
+issue 45 "やめた" "$tmp/body45" CLOSED DUPLICATE
+eq closed "$(st45)" "status: closed by hand with another reason"
+issue 45 "やめた" "$tmp/body45" CLOSED COMPLETED
+jq '.comments = [{"body":"Closed by tixforge: https://github.com/o/r/pull/3 merged"}]' "$GH_DIR/issue-45.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-45.json"
+eq completed "$(st45)" "status: closed with v2's comment"
 
 # Optimistic lock: someone else pushed after this copy was fetched.
 issue 46 "ログイン" "$tmp/body42"
