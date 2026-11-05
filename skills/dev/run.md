@@ -17,22 +17,22 @@
 
 **チケットの準備**（新規・再開のどちらでも、続けて行う）：
 
-- `references/github/fetch.md` を Read し、その手順で issue からチケットを取ってくる（手元のコピーは毎回 issue から作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。issue がキャンセル済みなら、下の 0. に従う。issue が完了済み（`closed_as: completed`）なら、状態ファイルで分ける：
-  - `Status` が `pr:*` → 下の 1. の `pr:*` へ進む（マージで issue が閉じた後の再開。pr.md の「再開」で `done` にする）。
+- チケットを「取ってくる」（`references/github/fetch.md` を Read し、その手順で行う。手元のコピーは毎回作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。チケットの状態が `canceled` なら、下の 0. に従う。`completed` なら、状態ファイルで分ける：
+  - `Status` が `pr:*` → 下の 1. の `pr:*` へ進む（マージでチケットが閉じた後の再開。pr.md の「再開」で `done` にする）。
   - 状態ファイルが無い・`done` → 完了済みであることを伝えて止まる。
-  - それより前のフェーズ → issue が閉じていることと `Status` を示し、どうするか尋ねる。
+  - それより前のフェーズ → チケットが閉じていることと `Status` を示し、どうするか尋ねる。
 - 読んだら「`<ticket-id>`：<タイトル>」を示す（取り違えの防止）。
 
 続けて：
 
-0. **キャンセル済みのチケット**（`closed_as: canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
+0. **キャンセル済みのチケット**（チケットの状態が `canceled`、または `state.md` の `Status` が `canceled`）なら、理由を示して止まる。やり直したいなら、新しいチケットを `/tixforge:ticket create` で作るよう伝える。
 1. **状態ファイル `.tixforge/<ticket-id>/state.md` が存在する**場合：読んで `Status` から再開する。
    - `<phase>:awaiting-approval`（`pr` 以外）→ そのフェーズの要約とゲートを再提示し、停止して待つ。
    - `<phase>:in-progress`（`pr` 以外）→ そこまで書かれたセクションを読み直し（Implement ならブランチの `git log` / `git status` も確認）、そのフェーズを継続する。途中成果が信頼できずにやり直したいときは、**やり直す前に**、捨てることになるもの（commit の一覧など）を示して尋ねる（伝えるだけにしない）。フェーズを戻すなら `rewind.md` の手順で行う。
    - `pr:*` → `<plugin>/skills/dev/pr.md` を Read し、その「再開」に従う。
-   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。PR がマージ済みなのに issue が開いたままなら、`references/github/pr.md`「マージされたとき」を確かめる。
+   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。PR がマージ済みなのにチケットの状態が `open`・`in-review` なら、「閉じる」の「完了」（`references/github/close.md`）を行う。
 2. **状態ファイルが存在しない**場合：
-   - `references/github/labels.md` を Read し、`bash <scripts>/issue-label.sh <番号> start` を実行する（終了コード 4：他の人が assign されている → 状態ファイルを作る前に停止して尋ねる）。
+   - 「状態を変える」で着手にする（`references/github/labels.md`。他の人が担当していれば、状態ファイルを作る前に停止して尋ねる）。
    - `bash <scripts>/run-state.sh init <ticket-id>` で状態ファイルを作り（`Status: research:in-progress`。`.tixforge/.gitignore` が無ければ一緒に作られ、状態ファイルは git に載らない）、Phase 1 を開始する。
 
 **いつでも**：ユーザーが「Plan からやり直したい」のように前のフェーズに戻りたいと言ったら、`<plugin>/skills/dev/rewind.md` の手順で戻す（`/tixforge:dev rewind` と同じ）。
@@ -83,7 +83,7 @@
 3. **コードの調査は Explore agent に任せる**（このセッションの文脈を、Implement の前に調査の読み込みで使い切らないため）。リポジトリが小さく見えても、`find`・Grep・Read でコードを調べ始める前に、まず Explore を起動する（Agent ツールで `subagent_type: Explore`）。チケットの要約と、具体的な問い（影響しそうなコード領域・似た既存実装・テストの場所と書き方・守るべき制約など）を渡し、ファイルパス付きの要約を受け取る。自分で調べてよいのは、Explore が使えない環境だけ。受け取った要約のうち、判断に必要な箇所は自分でも Read して確かめる。
 4. 整理する：チケットの要求、関連コンテキスト、影響しそうなコード領域、制約、未解決の疑問点。
 5. **未決事項を片付ける**：チケットの「未決事項」を 1 項目ずつ並べ、項目ごとに次のどれかをユーザーと決める（決めるのはユーザー。Claude は調査の結果と推奨を示す）：
-   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ チケットに書き戻す：その項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。`references/github/sync.md` のとおり issue に push する。
+   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ チケットに書き戻す：その項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。「書き戻す」（`references/github/sync.md`）を行う。
    - **どう作るかの決定**（実装の選び方）→ Approach の「未決事項の解決」の表に書く（Phase 2）。チケットの未決事項は、表を指す 1 行（「Approach で決定」）に置き換える。
    - **対象外に回す** → チケットの「対象外」に移す。
    決まらない項目が 1 つでも残っていれば、Research のゲートで止まる（`gates` に無くても）。
@@ -126,7 +126,7 @@
 2. 承認済みブランチ上で、承認済みの commit 分割に従って実装・commit する。
    - **テストは対応表に沿って書く。** 表の `自動` の行のテストを、表に書いたテスト名で作る。名前や場所を変えたら `## Implementation Log` に記録する（Review が照合できるように）。
    - **commit メッセージは `docs/context/commit.md` に従う**（最初の commit の前に読む。`Language:` の言語で書く）。`Source:` にパスがあればそのファイルを規約として読み、本文は補足として扱う。**`Source:` のファイルが読めなければ、黙って別の書式にしない。** 止まって伝え、`/tixforge:project update` で設定し直すか、今回は `commit.md` の本文と直近の `git log` の書式で進めるかを尋ねる。`commit.md` 自体が無ければ直近の `git log` の書式に合わせ、`/tixforge:project init` の再実行で作れることを伝える。
-   - 最初の commit のメッセージの最後の行に `Closes #<番号>` のトレーラーを入れる（`references/github/pr.md`。Base が default branch でない運用でも、リリースで issue が閉じるようにするため）。
+   - 最初の commit のメッセージに、「PR と紐づける」の commit の紐付けを入れる（`references/github/pr.md`）。
    - commit ごとの承認では止めない。
 3. commit を積むごとに `## Implementation Log`（commit hash とメッセージ、実装中の重要な判断）を更新する。
 4. 承認された計画どおりに進められないと分かったら（ある commit を大きく変える必要がある、方針が誤っていた等）、停止して提起する。これは小さな確認ではなく本当の判断事項。戻るなら `rewind.md` の手順で戻す。

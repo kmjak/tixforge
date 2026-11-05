@@ -2,7 +2,7 @@
 
 目的：明示的な確認の後にだけ PR を出し、完了まで見届ける。tixforge は PR をマージしない。
 
-`references/github/pr.md` を Read する。
+「PR と紐づける」（`references/github/pr.md`）を Read する。
 
 ## 再開（`pr:*` の Status から再開したとき）
 
@@ -27,19 +27,19 @@
 2. 取り返しのつかない操作の前に、次を提示する：**ブランチ**・**向き先ブランチ**（ヘッダ表の `Base`）・**PR タイトル**・**PR 本文の下書き**（タイトルと本文はドキュメント言語）。
    - **本文**：既定の PR テンプレート（`.github/pull_request_template.md`・`.github/PULL_REQUEST_TEMPLATE.md`・`docs/pull_request_template.md`・ルートの `pull_request_template.md`）があれば、その見出しに沿って埋める。無ければ「概要」「方針」「受け入れ条件（対応表の確かめ方と結果）」「検証」を書く。
    - **方針**は、Approach で合意した**結論と理由を 2〜3 行**だけ書く（検討した選択肢・試行錯誤の経緯は書かない。人のレビュアーに「なぜこうしたか」を伝えるためで、検討過程に引っ張らないため）。
-   - 本文の末尾に `Closes #<番号>` を必ず入れる。
+   - 本文に、「PR と紐づける」の紐付けを必ず入れる。
 3. `Status: pr:awaiting-approval` にして、**停止して明示的な確認を求める。** このゲートは `gates` の設定や前段の自動通過に関係なく必ず発生する。勝手に push / PR しない。
 4. 確認されたら：
-   - push の**直前に** issue からチケットを取り直す（`references/github/fetch.md`）。変更があったら、PR を作らずに停止し、`<plugin>/skills/dev/rewind.md` の「チケットが変わったとき」で戻すか尋ねる（実装が変更後のチケットを満たしているとは限らないため）。
+   - push の**直前に**チケットを「取ってくる」（`references/github/fetch.md`）。変更があったら、PR を作らずに停止し、`<plugin>/skills/dev/rewind.md` の「チケットが変わったとき」で戻すか尋ねる（実装が変更後のチケットを満たしているとは限らないため）。
    - `Status` は `pr:awaiting-approval` のまま push して PR を作成する（例：`gh pr create --base <Base> --body-file <一時ファイル>`。`--fill` は使わず本文を明示する）。guard hook により、push・PR 作成のたびにユーザーの確認画面が出る。**確認画面で拒否されたら、言い換えて再実行せず、停止して指示を待つ**（共通規約のガードレール）。
-   - 作成後に `references/github/pr.md`「紐付けの確認」を行い、`bash <scripts>/issue-label.sh <番号> review` を実行する。
+   - 作成後に「PR と紐づける」の「紐付けの確認」を行い、「状態を変える」でレビュー中にする（`references/github/labels.md`）。
 5. PR タイトル・向き先・URL を `## PR` に書き、`Status: pr:awaiting-review` にして URL を報告し、停止する。レビューとマージは人が行うので、tixforge は待つだけ。ユーザーには、レビューが進んだら（1 人なら CI が通ったら）`/tixforge:dev <ticket-id>` で再開するよう案内する。
 
 ## PR の状況確認
 
 `bash <scripts>/pr-status.sh <PR URL>` を実行する。1 行目が判定、2 行目以降が詳細。`.tixforge/config.yml` の `review.required`（無ければ `true`）と合わせて、次のとおり進む：
 
-- `merged` → `## PR` に結果を追記し、`Status: done` にする。`references/github/pr.md`「マージされたとき」に従って issue のラベルとクローズを扱う。
+- `merged` → `## PR` に結果を追記し、`Status: done` にする。「閉じる」の「完了」（`references/github/close.md`）を行う。
 - `approved`（Approve 済み・CI 成功・コンフリクトなし）→ `## PR` に結果を追記し、`Status: pr:ready-to-merge` にして停止する。マージはユーザーが行う。マージしたら `/tixforge:dev <ticket-id>` で再開すると `done` になることを伝える。
 - `ready`（Approve は無いが、CI 成功・コンフリクトなし）→
   - `review.required: false` なら `approved` と同じく `pr:ready-to-merge` にする。

@@ -19,6 +19,12 @@
 #               no-markers  the markers are gone (edited on GitHub, or not written by tixforge)
 #   closed_as   open | completed | canceled | unexpected (closed some other way,
 #               e.g. by hand); see closed_as() below
+#   status      the ticket's state in the words the instruction files use,
+#               with nothing GitHub-specific in them (ticket_status below):
+#               open | in-review (a PR is out) | merged (in Base, waiting
+#               for the release) | completed | canceled | closed-completed |
+#               closed-not-planned | closed (the last three: closed some
+#               other way, with GitHub's reason)
 #   local       same | differs | missing: the ticket file (when given) against
 #               the version tixforge last wrote to the issue. Only "same" means
 #               the file may overwrite a direct edit on GitHub.
@@ -97,6 +103,29 @@ verdict() {
 stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2> /dev/null || true; }
 
 has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
+
+# ticket_status <closed_as>: the status line of check (see the header).
+ticket_status() {
+  case $1 in
+    open)
+      if has_label tixforge:merged; then
+        echo merged
+      elif has_label tixforge:in-review; then
+        echo in-review
+      else
+        echo open
+      fi
+      ;;
+    completed | canceled) echo "$1" ;;
+    *)
+      case $reason in
+        COMPLETED) echo closed-completed ;;
+        NOT_PLANNED) echo closed-not-planned ;;
+        *) echo closed ;;
+      esac
+      ;;
+  esac
+}
 
 # closed_as <number>: how the loaded issue ended. Labels first (tixforge and
 # its Actions set them), then what GitHub recorded: a merged PR or a commit
@@ -179,7 +208,8 @@ case $cmd in
     [ $# -ge 1 ] && [ $# -le 2 ] || usage
     load "$1"
     verdict
-    echo "closed_as: $(closed_as "$1")"
+    ca=$(closed_as "$1")
+    echo "closed_as: $ca"
     if [ $# -eq 2 ]; then
       if [ -f "$2" ]; then
         ticket_body "$2" > "$tmpd/mine"
@@ -192,6 +222,7 @@ case $cmd in
         echo "local: missing"
       fi
     fi
+    echo "status: $(ticket_status "$ca")"
     echo "title: $title"
     echo "state: $state"
     echo "state_reason: $reason"

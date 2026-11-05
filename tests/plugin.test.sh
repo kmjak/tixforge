@@ -4,6 +4,7 @@
 #   2. every script a hook runs exists
 #   3. every plugin path the skills, references, agents and README name exists
 #      (a renamed file is otherwise read by Claude as missing, silently)
+#   4. dev and ticket name the ticket operations, not the GitHub issue details
 #
 # Needs jq. Usage: bash tests/plugin.test.sh
 set -u
@@ -67,6 +68,16 @@ while IFS= read -r p; do
   [ -e "$p" ] && ok || ng "a document names a missing file: $p ($(grep -lF "$p" $docs | tr '\n' ' '))"
 done <<< "$refs"
 [ "$n" -gt 20 ] && ok || ng "the documents name plugin files ($n found)"
+
+# --- tracker operations ----------------------------------------------------
+# dev and ticket call the ticket operations by name (references/common.md,
+# "チケットの操作"); what they do on GitHub issues is written only in
+# references/github/. PRs (gh pr) are the code host's, not the ticket's.
+section="tracker operations"
+hits=$(grep -nE 'closed_as|state_reason|issue-label\.sh|issue-sync\.sh (push|pull|create)|gh issue|Closes #|tixforge:(todo|in-progress|in-review|merged|done|canceled|out-of-sync)' \
+  skills/dev/*.md skills/ticket/*.md | grep -v '^[^:]*:[0-9]*:allowed-tools:')
+[ -z "$hits" ] && ok || ng "issue details in skills/dev or skills/ticket (use the operation names):
+$hits"
 
 echo "plugin: $pass passed, $fail failed"
 [ $fail -eq 0 ]
