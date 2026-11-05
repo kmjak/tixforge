@@ -45,7 +45,7 @@ lt_info() {
     h=$(awk '{ sub(/\r$/, "") } /^## / { exit } { print }' "$d/ticket.md")
     t=open
     printf '%s\n' "$h" | grep -Eq '^Status: canceled[[:space:]]*$' && t=canceled
-    r=$(printf '%s\n' "$h" | sed -n 's/^Reason: //p' | head -1)
+    r=$(printf '%s\n' "$h" | sed -n 's/^Reason: //p' | head -1 | tr '\t' ' ')
   fi
   printf '%s\t%s\t%s\n' "$run" "$t" "$r"
 }
@@ -282,11 +282,13 @@ is_open_status() { case "$1" in done | canceled | '') return 1 ;; *) return 0 ;;
 
 # current_runs <top> <branch>: the state.md of the open run on <branch>, or,
 # when no run is on it, of every open run before Implement (those have no
-# branch yet), one per line. Prints nothing when there is neither.
+# branch yet), one per line. Prints nothing when there is neither. v2's
+# local runs (LT-) are not runs to go on with: they wait for the migration.
 current_runs() {
   local f st early=""
   for f in "$(tf_dir "$1")"/*/state.md; do
     [ -f "$f" ] || continue
+    case $f in */LT-*/state.md) continue ;; esac
     st=$(field "$f" Status)
     is_open_status "$st" || continue
     if [ -n "$2" ] && [ "$(field "$f" Branch)" = "$2" ]; then

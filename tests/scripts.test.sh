@@ -104,7 +104,10 @@ has "GT-000123" "$(tid normalize GT-00123 2>&1)" "the error shows the right form
 # v2's local tickets: an error that points at the migration.
 tid normalize LT-000001 2> /dev/null
 eq 2 $? "a local ticket (v2) is refused"
-has "/tixforge:project update" "$(tid normalize lt-000001 2>&1)" "the error points at update"
+mkdir -p .tixforge/LT-000001 && printf '# LT-000001: A\n' > .tixforge/LT-000001/ticket.md
+has "/tixforge:project update" "$(tid normalize lt-000001 2>&1)" "an LT still to move points at update"
+has "/tixforge:project update" "$(tid normalize LT-1 2>&1)" "found with the wrong digit count too"
+rm -rf .tixforge/LT-000001
 eq 123 "$(tid number GT-000123)" "number"
 eq 8 "$(tid number GT-000008)" "number, not octal"
 tid number LT-000001 2> /dev/null
@@ -113,7 +116,7 @@ tid next 2> /dev/null
 eq 2 $? "next is gone"
 tid exists LT-000001 2> /dev/null
 eq 2 $? "exists: a local ticket (v2) is refused"
-has "/tixforge:project update" "$(tid normalize LT-12 2>&1)" "a local id with the wrong digit count also points at update"
+has "使えない: LT-12" "$(tid normalize LT-12 2>&1)" "a local id with the wrong digit count is refused too"
 tid number LT-000001 2> /dev/null
 eq 2 $? "number: a local ticket (v2) is refused"
 # A v2 LT that moved, or that v2 finished: the error says so.
@@ -125,6 +128,13 @@ has "v2 で終えた" "$(tid normalize LT-000013 2>&1)" "a dropped LT is finishe
 # A bare number is an issue even when a v2 LT has it, with a note.
 eq GT-000012 "$(tid normalize 12 2> /dev/null)" "a bare number is still the issue"
 has "注意: 12 は issue #12" "$(tid normalize 12 2>&1)" "a note when a v2 LT has the number"
+printf '# LT-000013: B\n' > .tixforge/LT-000013/ticket.md
+printf '| Field | Value |\n|---|---|\n| Status | done |\n' > .tixforge/LT-000013/state.md
+has "v2 で終えた" "$(tid normalize LT-000013 2>&1)" "a done run is finished too"
+has "手元に無い" "$(tid normalize LT-000099 2>&1)" "an LT that is not here"
+eq 1 "$(tid normalize 0 2>&1 | wc -l | tr -d ' ')" "one error for number zero"
+eq "note: 12 は issue #12。v2 の LT-000012 とは別のチケット" "$(tid detect 12 | sed -n 3p)" "detect notes it too"
+eq "" "$(tid detect 14 | sed -n 3p)" "no note without a v2 LT"
 rm -rf .tixforge/LT-000012 .tixforge/LT-000013
 
 # detect: an id only in an explicit form, or when the whole text is a number.
@@ -292,6 +302,11 @@ eq "$(printf 'LT-000003\tpr:awaiting-review\tcanceled\tGT-000061 に移した\nL
   "$(bash "$scripts/project-status.sh" lt)" "lt lists each folder to move"
 has "移行が要る: LT-000003 LT-000005 LT-000006（" "$(bash "$scripts/project-status.sh")" "the summary counts the same folders"
 rm -rf .tixforge/LT-000003 .tixforge/LT-000005 .tixforge/LT-000006
+mkdir -p ".tixforge/LT-000007 copy"
+printf '# LT-000007: C\nStatus: canceled\nReason: a\tb\n' > ".tixforge/LT-000007 copy/ticket.md"
+printf '| Field | Value |\n|---|---|\n| Status | plan:in-progress |\n' > ".tixforge/LT-000007 copy/state.md"
+eq "$(printf 'LT-000007 copy\tplan:in-progress\tcanceled\ta b')" "$(bash "$scripts/project-status.sh" lt)" "a folder copy is listed, and a tab in Reason stays one column"
+rm -rf ".tixforge/LT-000007 copy"
 # Quoted values are read too.
 printf 'ticket:\n  tracker: "local"\nrepository:\n  host: \x27none\x27   # v2\n' > .tixforge/config.yml
 out=$(bash "$scripts/project-status.sh")
@@ -332,6 +347,16 @@ has "複数" "$out" "several runs before Implement: ask which"
 has "GT-000901 GT-000902" "$out" "both are listed"
 rm -rf .tixforge/GT-000902
 bash "$scripts/run-state.sh" set GT-000901 Status implement:in-progress > /dev/null
+
+# A v2 local run waits for the migration: it is not a run to go on with.
+mkdir -p .tixforge/LT-000020
+printf '| Field | Value |\n|---|---|\n| Status | implement:in-progress |\n| Branch | LT-000020-x |\n' > .tixforge/LT-000020/state.md
+git switch -q -c LT-000020-x
+out=$(printf '{"source":"compact","cwd":"%s"}' "$repo" | bash "$scripts/session-start.sh")
+case "$out" in *LT-000020*) ng "session-start skips a v2 local run" ;; *) ok ;; esac
+git switch -q main
+git branch -q -D LT-000020-x
+rm -rf .tixforge/LT-000020
 
 # --- statusline.sh ---------------------------------------------------------
 section="statusline.sh"

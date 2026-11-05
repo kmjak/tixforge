@@ -17,7 +17,8 @@
 # stderr (in v2 a bare number could mean the LT).
 #
 # detect prints two lines: `id: <id>` (or `id: none`, or `invalid: <token>`)
-# and `rest: <the text without the id>`. An id is taken from GT-/#N (and
+# and `rest: <the text without the id>`, and a third, `note: …`, when
+# normalize would note that a bare number was also a v2 LT. An id is taken from GT-/#N (and
 # LT-, to report it) anywhere in the text, and from a bare number only when
 # the whole text is that number ("404 ページを作る" has no id).
 #
@@ -69,7 +70,11 @@ lt_error() {
       return
     }
   fi
-  echo "LT- のチケットは使えない: ${1}（v3 はチケットを GitHub issue に置く。/tixforge:project update で issue に移す）" >&2
+  if [ -n "$d" ] && [ -d "$(tf_dir)/$d" ]; then
+    echo "LT- のチケットは使えない: ${1}（v3 はチケットを GitHub issue に置く。/tixforge:project update で issue に移す）" >&2
+  else
+    echo "LT- のチケットは使えない: ${1}（v3 はチケットを GitHub issue に置く。この LT は手元に無い）" >&2
+  fi
 }
 
 # norm <token>: canonical id, or an error (exit 2) that shows the right form.
@@ -110,7 +115,7 @@ norm() {
       ;;
     *[!0-9]* | '') ;;
     *)
-      d=$(fmt LT "$up") && [ -d "$(tf_dir)/$d" ] \
+      d=$(fmt LT "$up" 2> /dev/null) && [ -d "$(tf_dir)/$d" ] \
         && echo "注意: ${t} は issue #$(printf '%s' "$up" | sed 's/^0*//')。v2 の ${d} とは別のチケット" >&2
       fmt GT "$up"
       return
@@ -148,12 +153,17 @@ case $cmd in
     fi
     rest=$(printf '%s' "$text" | awk -v t="$token" '{ i = index($0, t); if (i) $0 = substr($0, 1, i - 1) substr($0, i + length(t)); print }' \
       | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//')
-    if id=$(norm "$token" 2> /dev/null); then
+    note=""
+    notef=$(mktemp) || exit 2
+    if id=$(norm "$token" 2> "$notef"); then
       printf 'id: %s\n' "$id"
+      note=$(sed -n 's/^注意: //p' "$notef")
     else
       printf 'invalid: %s\n' "$token"
     fi
+    rm -f "$notef"
     printf 'rest: %s\n' "$rest"
+    [ -n "$note" ] && printf 'note: %s\n' "$note"
     ;;
   exists)
     [ $# -eq 1 ] || usage
