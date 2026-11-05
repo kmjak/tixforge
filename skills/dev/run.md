@@ -30,7 +30,7 @@
    - `<phase>:awaiting-approval`（`pr` 以外）→ そのフェーズの要約とゲートを再提示し、停止して待つ。
    - `<phase>:in-progress`（`pr` 以外）→ そこまで書かれたセクションを読み直し（Implement ならブランチの `git log` / `git status` も確認）、そのフェーズを継続する。途中成果が信頼できずにやり直したいときは、**やり直す前に**、捨てることになるもの（commit の一覧など）を示して尋ねる（伝えるだけにしない）。フェーズを戻すなら `rewind.md` の手順で行う。
    - `pr:*` → `<plugin>/skills/dev/pr.md` を Read し、その「再開」に従う。
-   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。PR がマージ済みなのにチケットの状態が `open`・`in-review` なら、`references/github/close.md` を Read し、その「完了」を行う。
+   - `done` → run が完了済みであること（`## PR` の結果付き）を伝え、どうしたいか尋ねる。勝手にやり直さない（やり直すなら新しいチケットを作る）。PR がマージ済みなのにチケットの状態が `open`・`in-review` なら、`references/github/close.md` を Read し、その「完了」を確かめる。
 2. **状態ファイルが存在しない**場合：
    - `references/github/labels.md` を Read し、その「dev の開始」で着手にする（他の人が担当している・閉じているときは、状態ファイルを作る前に、labels.md のとおり停止して尋ねる）。
    - `bash <scripts>/run-state.sh init <ticket-id>` で状態ファイルを作り（`Status: research:in-progress`。`.tixforge/.gitignore` が無ければ一緒に作られ、状態ファイルは git に載らない）、Phase 1 を開始する。

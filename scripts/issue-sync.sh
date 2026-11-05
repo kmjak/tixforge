@@ -19,15 +19,15 @@
 #               no-markers  the markers are gone (edited on GitHub, or not written by tixforge)
 #   closed_as   open | completed | canceled | unexpected (closed some other way,
 #               e.g. by hand); see closed_as() below
+#   local       same | differs | missing: the ticket file (when given) against
+#               the version tixforge last wrote to the issue. Only "same" means
+#               the file may overwrite a direct edit on GitHub.
 #   status      the ticket's state in the words the instruction files use,
 #               with nothing GitHub-specific in them (ticket_status below):
 #               open | in-review (a PR is out) | merged (in Base, waiting
 #               for the release) | completed | canceled | closed-completed |
 #               closed-not-planned | closed (the last three: closed some
 #               other way, with GitHub's reason)
-#   local       same | differs | missing: the ticket file (when given) against
-#               the version tixforge last wrote to the issue. Only "same" means
-#               the file may overwrite a direct edit on GitHub.
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
 # pull records the hash it saw in <dir>/.issue-hash; push refuses (exit 5)

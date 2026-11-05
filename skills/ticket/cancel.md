@@ -12,7 +12,7 @@
 4. **行うことを一覧で示し、確認を得る**（実行もこの順に行う。GitHub の操作を先にし、state.md を最後にする：途中で失敗しても、state.md だけが canceled になってやり直せなくなるのを防ぐため）：
    - 取ってきた担当者に自分（`gh api user --jq .login`）以外がいれば、「担当者：<login>（自分以外）」を一覧の先頭に載せる。
    - 「閉じる」の「キャンセル」（`close.md`）。開いたままだと、他の人が着手してしまうため。
-   - `state.md` の `## Approach` が書かれていれば、`record.md` の判断の記録のコメントを投稿する（何をしようとして、なぜやめたかを残すため）。投稿する本文もこの一覧で示す。
+   - `state.md` の `## Approach` が書かれていれば、`record.md` のとおり「記録を残す」を行う（何をしようとして、なぜやめたかを残すため）。投稿する本文もこの一覧で示す。
    - このチケットのブランチに開いている PR（`gh pr list --head <Branch> --state open`）があれば、**閉じるかどうかだけ**を尋ねる（閉じるなら `gh pr close <PR> --comment "Canceled by tixforge: <理由>"`）。残すと、レビュアーからは生きている PR に見えるため。
    - 最後に、`.tixforge/<ticket-id>/state.md` があれば、`bash <scripts>/run-state.sh set <ticket-id> Status canceled` を実行する。
 5. 確認されたら実行する。
