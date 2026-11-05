@@ -1,6 +1,6 @@
 # GitHub：PR と issue の紐付け・クローズ
 
-`GT-` のチケットで、dev の Implement（最初の commit）と PR フェーズで読む。
+dev の Implement（最初の commit）と PR フェーズで読む。
 
 ## commit と PR 本文
 

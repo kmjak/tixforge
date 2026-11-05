@@ -46,7 +46,7 @@ OUT_OF_SYNC=tixforge:out-of-sync
 
 # --- ticket file ------------------------------------------------------------
 
-ticket_title() { sed -n '1{s/^# *//; s/^[^:]*: *//; p;}' "$1"; }
+ticket_title() { sed -n '1{s/^# *//; s/^[^:]*: *//; p;}' "$1" | tr -d '\r'; }
 ticket_body() { awk '/^## / { on = 1 } on' "$1"; } # first ## to the end
 
 notice() { printf '%b\n' "$(msg issue_notice)"; }

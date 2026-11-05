@@ -9,6 +9,25 @@ set -u
 top=$(tf_top)
 conf=$(tf_config "$top")
 
+# pending_lts: the .tixforge/LT-* folders still to move, one
+# "<id>\t<run>\t<ticket>\t<reason>" line each (lt_info in lib.sh).
+pending_lts() {
+  local d info run rest
+  for d in "$(tf_dir "$top")"/LT-*; do
+    [ -d "$d" ] || continue
+    info=$(lt_info "$d")
+    run=${info%%	*}
+    rest=${info#*	}
+    lt_pending "$run" "${rest%%	*}" || continue
+    printf '%s\t%s\n' "${d##*/}" "$info"
+  done
+}
+# `project-status.sh lt`: only that list, for /tixforge:project update.
+if [ "${1:-}" = lt ]; then
+  pending_lts
+  exit 0
+fi
+
 echo "- リポジトリ: ${top}"
 if git -C "$top" rev-parse --git-dir > /dev/null 2>&1; then
   echo "- 現在のブランチ: $(git -C "$top" symbolic-ref --short -q HEAD 2> /dev/null || echo '(detached)')"
@@ -23,7 +42,6 @@ if [ -f "$conf" ]; then
   [ -z "$gates" ] && cfg_has gates "$conf" && gates="[]（pr のみ）"
   echo "- 設定（.tixforge/config.yml）: language=$(cfg language "$conf")" \
     "tracker=$(cfg ticket.tracker "$conf")" \
-    "host=$(cfg repository.host "$conf")" \
     "base_branch=$(cfg repository.base_branch "$conf")" \
     "close_issues=$(cfg repository.close_issues "$conf")" \
     "review.required=$(cfg review.required "$conf")" \
@@ -31,6 +49,17 @@ if [ -f "$conf" ]; then
 else
   echo "- .tixforge/config.yml が無い（/tixforge:project init が未実行）"
 fi
+
+# What v2 left: local tickets (LT-), tracker: local and host: none. v3 keeps
+# tickets in GitHub issues only, so they have to move first
+# (/tixforge:project update). Without config.yml (before init) nothing is
+# reported: init comes first.
+lts=""
+[ -f "$conf" ] && lts=$(pending_lts | cut -f1 | paste -sd' ' -)
+[ -f "$conf" ] && [ "$(cfg ticket.tracker "$conf")" = local ] && lts="tracker: local${lts:+ / $lts}"
+[ -n "$lts" ] && echo "- 移行が要る: ${lts}（v3 は LT を使えない。/tixforge:project update で issue に移す）"
+[ -f "$conf" ] && [ "$(cfg repository.host "$conf")" = none ] \
+  && echo "- 移行が要る: repository.host: none（v3 は GitHub が必須。GitHub のリポジトリを使うなら /tixforge:project update で移す。使わないなら tixforge v2 に留まる）"
 
 open=""
 for f in "$(tf_dir "$top")"/*/state.md; do

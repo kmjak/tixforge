@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The tixforge part of a Claude Code status line: the run of the current
 # directory and its Status, e.g.
-#   LT-000001 · plan:awaiting-approval
+#   GT-000001 · plan:awaiting-approval
 # The run is the one on the current branch, or else the run before Implement
 # (no branch yet); with several of those, the first one and "(+<n>)".
 # Prints nothing outside a tixforge run, so it can sit in any status line.

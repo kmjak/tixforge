@@ -1,6 +1,6 @@
 # GitHub：チケットを issue から取ってくる
 
-`GT-` のチケットで、dev・edit・cancel を始めるときと、dev の PR 作成の直前に行う。issue が正本で、手元の `.tixforge/<ticket-id>/ticket.md` は issue から作る作業用のコピー（git 管理外）。手元と issue が違えば、常に issue を採用する。
+dev・edit・cancel を始めるときと、dev の PR 作成の直前に行う。issue が正本で、手元の `.tixforge/<ticket-id>/ticket.md` は issue から作る作業用のコピー（git 管理外）。手元と issue が違えば、常に issue を採用する。
 
 1. **事前チェック**：`bash <scripts>/github-preflight.sh`。`ok:` 以外なら、出力をそのまま示して止まる（`gh auth login` は対話式なので、ユーザーに `! gh auth login` を実行してもらう）。
 2. **状況を見る**：`bash <scripts>/issue-sync.sh check <番号> .tixforge/<ticket-id>/ticket.md`。1 行目が同期の判定、以降に `closed_as`・`local` など。

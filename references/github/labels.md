@@ -1,6 +1,6 @@
 # GitHub：状態ラベルと担当者
 
-`GT-` のチケットで、状態が変わるときに読む。issue には状態ラベルが常に 1 つだけ付く（`bash <scripts>/issue-label.sh` が他を外す）。`tixforge:out-of-sync` は状態ではないので残る。
+チケットの状態が変わるときに読む。issue には状態ラベルが常に 1 つだけ付く（`bash <scripts>/issue-label.sh` が他を外す）。`tixforge:out-of-sync` は状態ではないので残る。
 
 | 時点 | コマンド | ラベル |
 |------|----------|--------|

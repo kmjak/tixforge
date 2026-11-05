@@ -318,8 +318,8 @@ git -C "$tfrepo" checkout -q GT-000001-login
 rm -rf "$tfrepo/.tixforge/GT-000002"
 set_state implement:in-progress
 
-# A local ticket (LT-) has no issue, so a PR needs no Closes line.
-state="local ticket"
+# A branch with no issue (a local ticket v2 left behind) needs no Closes line.
+state="v2 local ticket"
 mkdir -p "$tfrepo/.tixforge/LT-000003"
 printf '| Field   | Value |\n|---|---|\n| Status  | pr:awaiting-approval |\n| Branch  | LT-000003-x |\n| Base    | main |\n' > "$tfrepo/.tixforge/LT-000003/state.md"
 git -C "$tfrepo" checkout -q -b LT-000003-x

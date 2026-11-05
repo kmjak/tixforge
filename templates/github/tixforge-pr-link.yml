@@ -1,9 +1,9 @@
-# tixforge template: tixforge-pr-link (v4). Installed by /tixforge:project init.
+# tixforge template: tixforge-pr-link (v5). Installed by /tixforge:project init.
 # A server-side check that a pull request from a tixforge branch closes its
 # ticket's issue. The local guard hook can be bypassed; this cannot, once
 # the check is required in branch protection.
 #   branch GT-<number>-<slug>  ->  body must contain Closes / Fixes / Resolves #<number>
-# GT-000123 is issue #123. Other branches (LT- tickets, anything else) pass.
+# GT-000123 is issue #123. Other branches pass.
 # The error is in the document language, from .github/tixforge/messages.yml
 # (a copy of the plugin's), and says how to fix it: add the line and save.
 name: tixforge-pr-link

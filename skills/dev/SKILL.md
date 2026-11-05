@@ -24,7 +24,7 @@ allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project
 | 起動 | 内容 | 手順ファイル |
 |------|------|--------------|
 | `/tixforge:dev <ticket-id>` | 6 フェーズで実装から PR まで進める（状態ファイルがあれば、その Status から再開する） | `${CLAUDE_SKILL_DIR}/run.md` |
-| `/tixforge:dev rewind <ticket-id>` | 前のフェーズに戻す（戻り先を選ぶ。Research なら最初から、`GT-` ならチケットを手放すこともできる） | `${CLAUDE_SKILL_DIR}/rewind.md` |
+| `/tixforge:dev rewind <ticket-id>` | 前のフェーズに戻す（戻り先を選ぶ。Research なら最初から。チケットを手放すこともできる） | `${CLAUDE_SKILL_DIR}/rewind.md` |
 | `/tixforge:dev` | 選択肢を出す（下記） | — |
 
 **引数の解釈：** 先頭の語が `rewind` なら rewind で、残りはチケット id。それ以外は引数全体をチケット id として dev で進める。
@@ -34,7 +34,7 @@ allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project
 上の「現在の状態」にある進行中の run（`done`・`canceled` 以外）を使い、AskUserQuestion で選んでもらう（単一選択）。推測で決めない。
 
 1. **進行中の run を再開** — 進行中の run のチケット id と Status を説明に含める。**進行中の run が無ければこの選択肢は出さない。** 複数あるなら、どれを再開するか続けて尋ねる。
-2. **チケットを選んで始める** — チケット id を尋ねる（`.tixforge/*/ticket.md`、`tracker: github` なら `tixforge:todo` の issue を候補として示す）。
+2. **チケットを選んで始める** — チケット id を尋ねる（`tixforge:todo` の issue を候補として示す）。
 
 質問文に「前のフェーズに戻すのは `/tixforge:dev rewind <ticket-id>`」と添える。
 
@@ -44,7 +44,7 @@ allowed-tools: Read, Glob, Grep, Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/project
 
 | 参照ファイル | 読むとき |
 |--------------|----------|
-| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ（`GT-` のチケットを扱うとき） |
+| `${CLAUDE_PLUGIN_ROOT}/references/github/<名前>.md` | 手順が指示したファイルだけ |
 | `${CLAUDE_SKILL_DIR}/pr.md` | PR フェーズに入るとき・`pr:*` から再開するとき（`run.md` が指示する） |
 
 以下の共通規約は、このスキルのすべてに適用する。

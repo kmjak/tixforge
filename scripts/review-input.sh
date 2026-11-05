@@ -9,7 +9,7 @@
 # origin/<base> exists and forks later than the local <base> (the local one
 # is behind), origin/<base> is used, so commits other people pushed to the
 # base are not counted as part of this run. A local <base> that is ahead of
-# origin (unpushed merges, host: none) is used as is.
+# origin (unpushed merges) is used as is.
 #
 # Files go under <git dir>/tixforge/review/<id>/ (outside .tixforge/, which the
 # reviewers must not read) and are replaced on every call:
