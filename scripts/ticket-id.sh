@@ -61,7 +61,11 @@ lt_error() {
     t=${t%%	*}
     case $r in
       GT-*" に移した"*)
-        echo "LT- のチケットは使えない: ${1}（v2 のチケット。${r%% *} に移した。${r%% *} を使う）" >&2
+        if lt_pending "$run" "$t"; then
+          echo "LT- のチケットは使えない: ${1}（v2 のチケット。${r%% *} に移した。先に /tixforge:project update で移行を終えてから ${r%% *} を使う）" >&2
+        else
+          echo "LT- のチケットは使えない: ${1}（v2 のチケット。${r%% *} に移した。${r%% *} を使う）" >&2
+        fi
         return
         ;;
     esac

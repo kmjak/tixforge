@@ -123,6 +123,9 @@ eq 2 $? "number: a local ticket (v2) is refused"
 mkdir -p .tixforge/LT-000012 .tixforge/LT-000013
 printf '# LT-000012: A\nStatus: canceled\nReason: GT-000061 に移した\n' > .tixforge/LT-000012/ticket.md
 has "GT-000061 に移した" "$(tid normalize lt-12 2>&1)" "a moved LT names its GT id"
+printf '| Field | Value |\n|---|---|\n| Status | plan:in-progress |\n' > .tixforge/LT-000012/state.md
+has "先に /tixforge:project update で移行を終えて" "$(tid normalize lt-12 2>&1)" "a moved LT whose run is open: finish the move first"
+rm .tixforge/LT-000012/state.md
 printf '# LT-000013: B\nStatus: canceled\nReason: 不要になった\n' > .tixforge/LT-000013/ticket.md
 has "v2 で終えた" "$(tid normalize LT-000013 2>&1)" "a dropped LT is finished, not to move"
 # A bare number is an issue even when a v2 LT has it, with a note.

@@ -24,7 +24,7 @@
 
 | 用途 | コマンド |
 |------|----------|
-| 引数からチケット id を取り出す | `bash <scripts>/ticket-id.sh detect "<引数>"` → `id: <id>`（無ければ `id: none`、形が不正なら `invalid: <語>`）と `rest: <id を除いた残り>`。明示的な形（`GT-…`・`#123`）は文中でも拾い、裸の数字は引数全体が数字のときだけ拾う |
+| 引数からチケット id を取り出す | `bash <scripts>/ticket-id.sh detect "<引数>"` → `id: <id>`（無ければ `id: none`、形が不正なら `invalid: <語>`）と `rest: <id を除いた残り>`、番号が v2 の LT と重なれば `note: …`。明示的な形（`GT-…`・`#123`）は文中でも拾い、裸の数字は引数全体が数字のときだけ拾う |
 | 指定された id の正規化 | `bash <scripts>/ticket-id.sh normalize <引数>`（`GT-000123`（大文字小文字は問わない）・`#123`・`123`（どれも issue 番号）。桁数が違う id は 0 埋めせずにエラー（終了コード 2）→ 正しい形を示して尋ねる） |
 | そのチケットが実在するか | `bash <scripts>/ticket-id.sh exists <id>` → `issue`・`pull-request`（その番号は PR）・`none` |
 | id → issue 番号 | `bash <scripts>/ticket-id.sh number <GT-id>` |
