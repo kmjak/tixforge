@@ -20,6 +20,21 @@
 
 **v2 からの移行**：「現在の状態」に「移行が要る」があれば、`/tixforge:project update` のとき以外は、その内容を伝えて止まる。
 
+**チケットの操作**：手順はチケットへの操作を次の名前で呼ぶ。名前で呼ばれた操作を行う前に、表の手順ファイルを（このセッションでまだ読んでいなければ）Read し、その手順で行う。
+
+| 操作 | すること | 手順 |
+|------|----------|------|
+| 作る | チケットを作って id を決める・GitHub 上で作られたものを取り込む | `references/github/create.md` |
+| 取ってくる | 手元のコピーを作り直し、変わったかとチケットの状態を返す | `references/github/fetch.md` |
+| 探す | 似たチケット・着手できるチケットの候補を出す | `references/github/fetch.md`「探す」 |
+| 書き戻す | 書き換えたチケットを送る | `references/github/sync.md` |
+| 状態を変える | 着手・レビュー中・マージ済み・手放す | `references/github/labels.md` |
+| 閉じる | 完了・キャンセル | `references/github/close.md` |
+| PR と紐づける | commit と PR 本文で紐づけ、確かめる | `references/github/pr.md` |
+| 記録を残す | やめた方針と理由を残す | `references/github/record.md` |
+
+**チケットの状態**（「取ってくる」が返す）：`open`（着手前・進行中）・`in-review`（PR が出ている）・`merged`（Base にマージ済みでリリース待ち）・`completed`（完了）・`canceled`（キャンセル済み）・`closed-completed`／`closed-not-planned`／`closed`（tixforge 以外の方法で閉じられた。完了として・予定なしとして・理由なし）。
+
 **id は必ず `<scripts>/ticket-id.sh` で扱う**（手で 0 埋め・変換・解釈しない。シェルの算術に 0 埋めの数字を渡すと 8 進数になる）。出力はそのまま使う：
 
 | 用途 | コマンド |
@@ -61,7 +76,7 @@
 - 設定に必要なキーが無ければ、推測の既定値で補わず、`/tixforge:project init` の再実行で足せることを伝える（init は全てのキーを書く）。`review.required` が無ければ `true`、`gates` が無ければ `[approach, plan, pr]` として扱う。
 - 上記パスは固定規約。`init` はこの規約どおりの雛形を作るだけで、パスの選択はしない。
 - どのサブコマンドでも、既存ファイルを黙って上書きしない（作業用コピー `.tixforge/<id>/ticket.md` は、issue から作り直すものなので例外。作り直すときは差分を示す）。
-- **キャンセル済みのチケット**（issue の `closed_as` が `canceled`、または `state.md` の `Status` が `canceled`）は、どのサブコマンドでも操作しない。その旨を伝えて止まる。
+- **キャンセル済みのチケット**（チケットの状態が `canceled`、または `state.md` の `Status` が `canceled`）は、どのサブコマンドでも操作しない。その旨を伝えて止まる。
 
 ### スクリプト（`<scripts>/`）
 

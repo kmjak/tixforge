@@ -26,7 +26,7 @@ run を前のフェーズに戻す、ただ 1 つの手順。次のどれから�
    - PR を出した後（`pr:*`）から戻し、同じブランチで続ける（Implement に戻す・「このブランチの上で続ける」）なら、戻り先に関係なく、この後の commit は既存の PR に入ること、リポジトリの設定によっては Approve が外れることを伝える。
 6. **理由**を 1 行で尋ねる（Review の見直しから来たなら、その指摘の番号と要約でよい）。
 7. **行うことを一覧で示し、1 回の確認でまとめて承認をもらってから実行する**：
-   - `## Approach` が書かれていて、Approach 以前に戻す（方針を捨てる）なら、`references/github/record.md` を Read し、判断の記録のコメントを投稿する（状態ファイルから方針が消える前に）。
+   - `## Approach` が書かれていて、Approach 以前に戻す（方針を捨てる）なら、`references/github/record.md` を Read し、「記録を残す」を行う（状態ファイルから方針が消える前に）。
    - `bash <scripts>/run-state.sh rewind <ticket-id> <phase> --reason "<理由>"`（「このブランチの上で続ける」なら `--keep-log` を付ける）。出力された history のファイルを伝える。
    - 「新しいブランチで作り直す」なら、`bash <scripts>/run-state.sh set <ticket-id> Branch —` でヘッダのブランチを外し、決めたブランチの片付けを行う。
 8. 戻したフェーズから、そのフェーズの手順（`run.md`）で続ける。前の内容は history にあるので、参考として読んでよい（ただし承認済みとは扱わず、ゲートは通り直す）。
@@ -35,8 +35,8 @@ run を前のフェーズに戻す、ただ 1 つの手順。次のどれから�
 
 1. 手順 2・5 と同じくブランチの扱いを尋ね、理由を 1 行で尋ねる。
 2. `references/github/labels.md` を Read する（`## Approach` が書かれていれば `references/github/record.md` も）。行うことを一覧で示し、確認を得てから実行する：
-   - `## Approach` が書かれていれば、判断の記録のコメントを投稿する（見出しは「手放す」）。
-   - `bash <scripts>/issue-label.sh <番号> reset`（`tixforge:todo` に戻し、assignee から自分を外す）。
+   - `## Approach` が書かれていれば、「記録を残す」を行う（見出しは「手放す」）。
+   - 「状態を変える」で手放す（着手前に戻し、担当者から自分を外す）。
    - ブランチの片付け（決めたもの）。
    - 手元の run（`.tixforge/<ticket-id>/state.md` と `history/`）を削除する。受け取った人は自分の手元で新しく始めるので、残すと古い状態が紛らわしい。チケットの作業用コピー（`ticket.md`）は残してよい。
 3. 行ったことを伝える。

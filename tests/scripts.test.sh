@@ -648,6 +648,28 @@ eq "closed_as: completed" "$(is check 45 | sed -n 2p)" "merged label"
 issue 45 "やめた" "$tmp/body45" CLOSED COMPLETED
 jq '.closedByPullRequestsReferences = [{"number":9}]' "$GH_DIR/issue-45.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-45.json"
 eq "closed_as: completed" "$(is check 45 | sed -n 2p)" "closed by a PR"
+# status: the same, in the words the instruction files use.
+st45() { is check 45 | sed -n 's/^status: //p'; }
+eq completed "$(st45)" "status: completed"
+issue 45 "やめた" "$tmp/body45" CLOSED NOT_PLANNED '[{"name":"tixforge:canceled"}]'
+eq canceled "$(st45)" "status: canceled"
+issue 45 "やめた" "$tmp/body45" CLOSED COMPLETED '[{"name":"tixforge:in-review"}]'
+eq closed-completed "$(st45)" "status: closed by hand as completed"
+issue 45 "やめた" "$tmp/body45" CLOSED NOT_PLANNED
+eq closed-not-planned "$(st45)" "status: closed by hand as not planned"
+issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:in-progress"}]'
+eq open "$(st45)" "status: open"
+issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:in-review"}]'
+eq in-review "$(st45)" "status: in-review"
+issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:merged"}]'
+eq merged "$(st45)" "status: merged, waiting for the release"
+issue 45 "やめた" "$tmp/body45" OPEN "" '[{"name":"tixforge:in-review"},{"name":"tixforge:merged"}]'
+eq merged "$(st45)" "status: merged wins over in-review"
+issue 45 "やめた" "$tmp/body45" CLOSED DUPLICATE
+eq closed "$(st45)" "status: closed by hand with another reason"
+issue 45 "やめた" "$tmp/body45" CLOSED COMPLETED
+jq '.comments = [{"body":"Closed by tixforge: https://github.com/o/r/pull/3 merged"}]' "$GH_DIR/issue-45.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-45.json"
+eq completed "$(st45)" "status: closed with v2's comment"
 
 # Optimistic lock: someone else pushed after this copy was fetched.
 issue 46 "ログイン" "$tmp/body42"
