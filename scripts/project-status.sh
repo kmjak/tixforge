@@ -34,10 +34,11 @@ fi
 # What v2 left: local tickets (LT-), tracker: local and host: none. v3 keeps
 # tickets in GitHub issues only, so they have to move first
 # (/tixforge:project update).
-# A canceled ticket (moved, or dropped) and a done run need nothing.
+# A canceled ticket (moved, or dropped), a done run and a folder with
+# neither file need nothing.
 lts=""
 for d in "$(tf_dir "$top")"/LT-*; do
-  [ -d "$d" ] || continue
+  [ -f "$d/ticket.md" ] || [ -f "$d/state.md" ] || continue
   grep -q '^Status: canceled' "$d/ticket.md" 2> /dev/null && continue
   [ -f "$d/state.md" ] && case $(field "$d/state.md" Status) in done | canceled) continue ;; esac
   lts="${lts:+$lts }${d##*/}"

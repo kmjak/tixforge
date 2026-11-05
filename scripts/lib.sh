@@ -25,12 +25,11 @@ ensure_workspace() {
 }
 
 # Ticket ids: GT-<6 digits> for GitHub issues (GT-000123 is issue #123).
-# More than 6 digits are written as is. is_ticket_id also takes LT- (v2's
-# local tickets) so that /tixforge:project update can close their runs;
-# ticket-id.sh normalize refuses LT-.
+# More than 6 digits are written as is. v2's local tickets (LT-) are not
+# ids any more: ticket-id.sh normalize refuses them with the migration.
 # shellcheck disable=SC2034 # used by ticket-id.sh
 ID_PAD=6
-is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^(LT|GT)-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
+is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^GT-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
 # issue_of <id>: the issue number of a GT id, or nothing.
 issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac }
 

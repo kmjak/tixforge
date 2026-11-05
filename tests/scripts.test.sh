@@ -111,6 +111,8 @@ tid number LT-000001 2> /dev/null
 eq 2 $? "a local ticket has no issue number"
 tid next 2> /dev/null
 eq 2 $? "next is gone"
+tid exists LT-000001 2> /dev/null
+eq 2 $? "exists: a local ticket (v2) is refused"
 
 # detect: an id only in an explicit form, or when the whole text is a number.
 dt() { tid detect "$@" | sed -n "${n:-1}p"; }
@@ -138,6 +140,8 @@ st init GT-000901 2> /dev/null
 eq 3 $? "init twice"
 st init T000001 2> /dev/null
 eq 2 $? "not a ticket id"
+st init LT-000001 2> /dev/null
+eq 2 $? "no new run for a local ticket (v2)"
 eq research:in-progress "$(st get GT-000901)" "initial Status"
 eq 3 "$(st get GT-000901 Format)" "init writes the current Format"
 eq "Research|Approach|Plan|Implementation Log|Review|PR" \
@@ -246,8 +250,13 @@ printf '| Field | Value |\n|---|---|\n| Status | pr:awaiting-review |\n| Updated
 bash "$scripts/run-state.sh" set LT-000003 Status done > /dev/null && ok || ng "a local run with a PR is finished by hand"
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
 rm -rf .tixforge/LT-000003
+mkdir -p .tixforge/LT-000004/history
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a folder with neither file needs nothing" ;; *) ok ;; esac
 sed 's/tracker: github/tracker: local/' "$tmp/keep-gates.yml" > .tixforge/config.yml
 has "移行が要る: tracker: local（" "$(bash "$scripts/project-status.sh")" "tracker: local"
+printf '# LT-000004: A\n' > .tixforge/LT-000004/ticket.md
+has "移行が要る: tracker: local / LT-000004（" "$(bash "$scripts/project-status.sh")" "tracker: local and a local ticket"
+rm -rf .tixforge/LT-000004
 awk '{ print } /^repository:$/ { print "  host: none" }' "$tmp/keep-gates.yml" > .tixforge/config.yml
 has "移行が要る: repository.host: none（" "$(bash "$scripts/project-status.sh")" "host: none"
 cp "$tmp/keep-gates.yml" .tixforge/config.yml

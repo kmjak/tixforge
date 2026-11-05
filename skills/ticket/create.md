@@ -5,7 +5,7 @@
 1. `.tixforge/config.yml` が無い（init 未実行の）場合は、その旨を伝えて `/tixforge:project init` を案内し、止まる（設定なしでは進めない）。
 2. `.tixforge/config.yml` の `language`（無ければ日本語）を使う（SKILL.md の「現在の状態」にある）。`references/github/create.md` を Read し、その「事前チェック」を行う。
 3. **既存のチケットを指していないか**を確かめる：引数を `bash <scripts>/ticket-id.sh detect "<引数>"` に渡す（自分で解釈しない）。
-   - `invalid: <語>` なら、正しい id の形（`GT-000123`・`#123`）を示して尋ねる。
+   - `invalid: <語>` なら、`bash <scripts>/ticket-id.sh normalize <語>` のエラーを示し、正しい id を尋ねる。
    - `id: <id>` で `rest:` も空でない（説明の中に id がある）なら、先に「既存のチケット `<id>` を指しているか、説明の中で触れているだけか」を尋ねる。触れているだけなら、引数全体を説明として新しく作る（手順 4 へ）。
    - `id: <id>` なら `bash <scripts>/ticket-id.sh exists <id>` で確かめる（終了コード 3 なら、出力を示して止まる）：
      - `none` → そのチケットは無いことを伝え、`rest:` を説明として新しく作るか尋ねる。

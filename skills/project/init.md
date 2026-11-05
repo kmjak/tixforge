@@ -67,7 +67,7 @@
    <!-- Source が空欄なら、ここに規約本文を書く。
         Source があれば、ここには tixforge 固有の補足だけを書く（Source と矛盾したら Source を優先する）。 -->
    ```
-8. **チケット管理**（`ticket.tracker`）：尋ねずに `tracker: github` を書く。チケットは issue で、id は `GT-<issue 番号>`。public リポジトリなら、チケットの背景や未決事項も公開されることを伝える。再実行のたびに次を行う：
+8. **チケット管理**（`ticket.tracker`）：尋ねずに `tracker: github` を書く。public リポジトリなら、チケットの背景や未決事項も公開されることを伝える。再実行のたびに次を行う：
    - **事前チェック**：`bash <scripts>/github-preflight.sh`（同じ実行の中で「リポジトリ」の手順で既に `ok:` だったなら繰り返さない）。`ok:` 以外なら出力を示し、済ませてもらってから確かめ直す。
    - **ラベルを作る**：`references/github/labels.md` を Read し、tixforge のラベルのうち無いものを意味と一緒に示して確認を得てから、`bash <scripts>/issue-label.sh setup` で作る。
    - **issue フォーム**（任意）：tixforge を使わない人（PM など）も GitHub の画面から issue を作るなら、チケットと同じ見出しの issue フォームを入れるか尋ねる。入れるなら `<plugin>/templates/github/ISSUE_TEMPLATE/tixforge-ticket.yml` を `.github/ISSUE_TEMPLATE/` にコピーする（ドキュメント言語が日本語以外なら、ラベル・見出し・説明をその言語に訳す。見出しはチケットの見出しと同じにする）。フォームで作られた issue は `/tixforge:ticket create #<番号>` で取り込める。
