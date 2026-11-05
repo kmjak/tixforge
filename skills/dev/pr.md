@@ -30,7 +30,7 @@
    - 本文に、「PR と紐づける」の紐付けを必ず入れる。
 3. `Status: pr:awaiting-approval` にして、**停止して明示的な確認を求める。** このゲートは `gates` の設定や前段の自動通過に関係なく必ず発生する。勝手に push / PR しない。
 4. 確認されたら：
-   - push の**直前に**チケットを「取ってくる」（`references/github/fetch.md`）。変更があったら、PR を作らずに停止し、`<plugin>/skills/dev/rewind.md` の「チケットが変わったとき」で戻すか尋ねる（実装が変更後のチケットを満たしているとは限らないため）。
+   - push の**直前に**、`references/github/fetch.md` を Read し、チケットを「取ってくる」。変更があったら、PR を作らずに停止し、`<plugin>/skills/dev/rewind.md` の「チケットが変わったとき」で戻すか尋ねる（実装が変更後のチケットを満たしているとは限らないため）。
    - `Status` は `pr:awaiting-approval` のまま push して PR を作成する（例：`gh pr create --base <Base> --body-file <一時ファイル>`。`--fill` は使わず本文を明示する）。guard hook により、push・PR 作成のたびにユーザーの確認画面が出る。**確認画面で拒否されたら、言い換えて再実行せず、停止して指示を待つ**（共通規約のガードレール）。
    - 作成後に「PR と紐づける」の「紐付けの確認」を行い、`references/github/labels.md` を Read し、その「PR の作成」でレビュー中にする。
 5. PR タイトル・向き先・URL を `## PR` に書き、`Status: pr:awaiting-review` にして URL を報告し、停止する。レビューとマージは人が行うので、tixforge は待つだけ。ユーザーには、レビューが進んだら（1 人なら CI が通ったら）`/tixforge:dev <ticket-id>` で再開するよう案内する。

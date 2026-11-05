@@ -2,7 +2,7 @@
 
 目的：既存のチケットの内容を、ユーザーとの対話で書き換える。進行中の dev の run があれば、変更の影響に合わせてフェーズを戻す。
 
-1. **準備**：引数のチケット id を `bash <scripts>/ticket-id.sh normalize <引数>` で正規化する（無ければ尋ねる。「探す」の開いているチケットを候補として示す）。`references/github/fetch.md` と `references/github/sync.md` を Read する。
+1. **準備**：`references/github/fetch.md` と `references/github/sync.md` を Read する。引数のチケット id を `bash <scripts>/ticket-id.sh normalize <引数>` で正規化する（無ければ尋ねる。「探す」の開いているチケットを候補として示す）。
 2. **チケットを読む**：
    - `fetch.md` の手順で issue から手元のコピーを作り直してから読む（issue が正本。GitHub 上で直接編集されていたら、そこで取り込むか尋ねる）。取り込んだ変更は、「フェーズを戻す」の影響判断に含める。
    - 読んだら「`<ticket-id>`：<タイトル>」を示す（取り違えの防止）。
