@@ -113,6 +113,7 @@ tid next 2> /dev/null
 eq 2 $? "next is gone"
 tid exists LT-000001 2> /dev/null
 eq 2 $? "exists: a local ticket (v2) is refused"
+has "/tixforge:project update" "$(tid normalize LT-12 2>&1)" "a local id with the wrong digit count also points at update"
 
 # detect: an id only in an explicit form, or when the whole text is a number.
 dt() { tid detect "$@" | sed -n "${n:-1}p"; }
@@ -249,6 +250,24 @@ case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update clo
 printf '| Field | Value |\n|---|---|\n| Status | pr:awaiting-review |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
 bash "$scripts/run-state.sh" set LT-000003 Status done > /dev/null && ok || ng "a local run with a PR is finished by hand"
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "update closes a local run with run-state set" ;; *) ok ;; esac
+# A move stopped halfway: the ticket is canceled, the run is still open.
+printf '# LT-000003: A\nStatus: canceled\nReason: GT-000061 に移した\n' > .tixforge/LT-000003/ticket.md
+printf '| Field | Value |\n|---|---|\n| Status | implement:in-progress |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
+has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "a canceled ticket with an open run"
+# A run with no ticket.md.
+rm .tixforge/LT-000003/ticket.md
+has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "an open run with no ticket"
+rm .tixforge/LT-000003/state.md
+# Only the header says canceled: a "Status: canceled" line in the body does not.
+printf '# LT-000003: A\n\n## 背景\n```\nStatus: canceled\n```\n' > .tixforge/LT-000003/ticket.md
+has "移行が要る: LT-000003（" "$(bash "$scripts/project-status.sh")" "Status: canceled in the body is not the header"
+printf '# LT-000003: A\r\nStatus: canceled\r\n\r\n## 背景\r\n' > .tixforge/LT-000003/ticket.md
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a canceled ticket with CRLF" ;; *) ok ;; esac
+# Before init (no config.yml) nothing is reported: init comes first.
+printf '# LT-000003: A\n' > .tixforge/LT-000003/ticket.md
+mv .tixforge/config.yml "$tmp/no-conf.yml"
+case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "no migration before init" ;; *) ok ;; esac
+mv "$tmp/no-conf.yml" .tixforge/config.yml
 rm -rf .tixforge/LT-000003
 mkdir -p .tixforge/LT-000004/history
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a folder with neither file needs nothing" ;; *) ok ;; esac

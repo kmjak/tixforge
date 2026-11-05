@@ -34,13 +34,20 @@ fi
 # What v2 left: local tickets (LT-), tracker: local and host: none. v3 keeps
 # tickets in GitHub issues only, so they have to move first
 # (/tixforge:project update).
-# A canceled ticket (moved, or dropped), a done run and a folder with
-# neither file need nothing.
+# A folder needs it while its run is open (state.md, whatever ticket.md
+# says: a move stopped halfway leaves the ticket canceled and the run
+# open), or, with no run, while ticket.md is not canceled in its header
+# (the lines above the first "## "). Without config.yml (before init)
+# nothing is reported: init comes first.
 lts=""
-for d in "$(tf_dir "$top")"/LT-*; do
-  [ -f "$d/ticket.md" ] || [ -f "$d/state.md" ] || continue
-  grep -q '^Status: canceled' "$d/ticket.md" 2> /dev/null && continue
-  [ -f "$d/state.md" ] && case $(field "$d/state.md" Status) in done | canceled) continue ;; esac
+[ -f "$conf" ] && for d in "$(tf_dir "$top")"/LT-*; do
+  if [ -f "$d/state.md" ]; then
+    case $(field "$d/state.md" Status) in done | canceled) continue ;; esac
+  elif [ -f "$d/ticket.md" ]; then
+    awk '{ sub(/\r$/, "") } /^## / { exit } /^Status: canceled[ \t]*$/ { f = 1; exit } END { exit !f }' "$d/ticket.md" && continue
+  else
+    continue
+  fi
   lts="${lts:+$lts }${d##*/}"
 done
 [ -f "$conf" ] && [ "$(cfg ticket.tracker "$conf")" = local ] && lts="tracker: local${lts:+ / $lts}"

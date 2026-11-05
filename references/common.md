@@ -18,7 +18,7 @@
 
 **チケット id の形式：** チケットは GitHub issue で、id は `GT-<issue 番号>`。番号は 6 桁に 0 埋めする（`GT-000123` は issue #123）。番号が 6 桁を超えたら 0 埋めせずにそのまま使う。issue が正本（`references/github/`）で、番号は create で issue を作って得る。
 
-**v2 の設定**：「現在の状態」に「移行が要る」があれば、`/tixforge:project update` のとき以外は、その内容を伝えて止まる。
+**v2 からの移行**：「現在の状態」に「移行が要る」があれば、`/tixforge:project update` のとき以外は、その内容を伝えて止まる。
 
 **id は必ず `<scripts>/ticket-id.sh` で扱う**（手で 0 埋め・変換・解釈しない。シェルの算術に 0 埋めの数字を渡すと 8 進数になる）。出力はそのまま使う：
 
@@ -29,7 +29,7 @@
 | そのチケットが実在するか | `bash <scripts>/ticket-id.sh exists <id>` → `issue`・`pull-request`（その番号は PR）・`none` |
 | id → issue 番号 | `bash <scripts>/ticket-id.sh number <GT-id>` |
 
-- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。`detect` の `invalid: <語>` は、`bash <scripts>/ticket-id.sh normalize <語>` を実行してそのエラーを示す。
+- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。`detect` の `invalid: <語>` は、`bash <scripts>/ticket-id.sh normalize <語>` を実行してそのエラーを示す。`LT-` のエラーで、`.tixforge/<その LT の id>/ticket.md` に `Reason: <GT-id> に移した` があれば、その `GT-` の id も示し、それで進めるか尋ねる。
 - 取り違えを防ぐため、dev・edit・cancel は始めるときに「`<id>`：<チケットのタイトル>」を必ずユーザーに示す。
 
 | 用途 | パス |
@@ -49,7 +49,7 @@
     test: npm test
     lint: npm run lint
   ticket:
-    tracker: github   # チケットの置き場。今は github だけ
+    tracker: github   # チケットの置き場：github
   repository:
     base_branch: main  # Plan の Base の既定値
     close_issues: merge   # Base が GitHub の default branch でないとき：merge（Base へのマージで閉じる）| release（default branch へのリリースで閉じる）

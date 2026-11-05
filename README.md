@@ -46,7 +46,7 @@ commands:               # dev が検証で書いた順に実行する（無け�
   test: npm test
   lint: npm run lint
 ticket:
-  tracker: github       # チケットの置き場。今は github だけ
+  tracker: github       # チケットの置き場：github
 repository:
   base_branch: develop  # dev がブランチを切る元・PR の向き先
   close_issues: release # base_branch が GitHub の default branch と違うとき：release | merge
@@ -77,9 +77,9 @@ gates: [approach, plan, pr]  # 必ず止まるゲート（pr は常に止まる�
 
 - **ゲート**：`gates` にあるフェーズでは必ず止まる。無いフェーズは、止まる条件（未決事項・ユーザーの判断・対処が決まっていない指摘など）が無ければ自動で通過する。PR の前は常に止まる。止まった所が再開点になる。
 - **Status**：`<phase>:in-progress`・`<phase>:awaiting-approval`、PR 後は `pr:awaiting-review`・`pr:ready-to-merge`（Approve・CI・コンフリクトの条件を満たしマージ待ち）。`done` はマージされたときだけ。
-- **巻き戻し**：`/tixforge:dev rewind <id>`（または dev の最中に「Plan からやり直したい」と頼む）で、前のフェーズに戻す。後のフェーズの記録は `history/` に移る。ブランチに commit があれば、そのブランチの上で続けるか作り直すかを選ぶ。GitHub のチケットは、ここから他の人に渡せる（手放す）。
+- **巻き戻し**：`/tixforge:dev rewind <id>`（または dev の最中に「Plan からやり直したい」と頼む）で、前のフェーズに戻す。後のフェーズの記録は `history/` に移る。ブランチに commit があれば、そのブランチの上で続けるか作り直すかを選ぶ。チケットは、ここから他の人に渡せる（手放す）。
 
-## GitHub 連携（`GT-` のチケット）
+## GitHub 連携
 
 - issue が正本。チケットの全文と、tixforge が書いたことを確かめるハッシュを本文に載せる。本文とタイトルは GitHub 上で直接編集せず、`/tixforge:ticket edit` で変える（直接編集されると検知して、取り込むか尋ねる）。2 人が同時に edit しても、後から書き戻す人の古いコピーは拒否される。
 - GitHub の画面で作られた issue も、`/tixforge:ticket create #<番号>` で取り込める（`project init` で issue フォームを入れておくと、見出しがそろう）。
