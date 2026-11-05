@@ -9,6 +9,25 @@ set -u
 top=$(tf_top)
 conf=$(tf_config "$top")
 
+# pending_lts: the .tixforge/LT-* folders still to move, one
+# "<id>\t<run>\t<ticket>\t<reason>" line each (lt_info in lib.sh).
+pending_lts() {
+  local d info run rest
+  for d in "$(tf_dir "$top")"/LT-*; do
+    [ -d "$d" ] || continue
+    info=$(lt_info "$d")
+    run=${info%%	*}
+    rest=${info#*	}
+    lt_pending "$run" "${rest%%	*}" || continue
+    printf '%s\t%s\n' "${d##*/}" "$info"
+  done
+}
+# `project-status.sh lt`: only that list, for /tixforge:project update.
+if [ "${1:-}" = lt ]; then
+  pending_lts
+  exit 0
+fi
+
 echo "- リポジトリ: ${top}"
 if git -C "$top" rev-parse --git-dir > /dev/null 2>&1; then
   echo "- 現在のブランチ: $(git -C "$top" symbolic-ref --short -q HEAD 2> /dev/null || echo '(detached)')"
@@ -33,23 +52,10 @@ fi
 
 # What v2 left: local tickets (LT-), tracker: local and host: none. v3 keeps
 # tickets in GitHub issues only, so they have to move first
-# (/tixforge:project update).
-# A folder needs it while its run is open (state.md, whatever ticket.md
-# says: a move stopped halfway leaves the ticket canceled and the run
-# open), or, with no run, while ticket.md is not canceled in its header
-# (the lines above the first "## "). Without config.yml (before init)
-# nothing is reported: init comes first.
+# (/tixforge:project update). Without config.yml (before init) nothing is
+# reported: init comes first.
 lts=""
-[ -f "$conf" ] && for d in "$(tf_dir "$top")"/LT-*; do
-  if [ -f "$d/state.md" ]; then
-    case $(field "$d/state.md" Status) in done | canceled) continue ;; esac
-  elif [ -f "$d/ticket.md" ]; then
-    awk '{ sub(/\r$/, "") } /^## / { exit } /^Status: canceled[ \t]*$/ { f = 1; exit } END { exit !f }' "$d/ticket.md" && continue
-  else
-    continue
-  fi
-  lts="${lts:+$lts }${d##*/}"
-done
+[ -f "$conf" ] && lts=$(pending_lts | cut -f1 | paste -sd' ' -)
 [ -f "$conf" ] && [ "$(cfg ticket.tracker "$conf")" = local ] && lts="tracker: local${lts:+ / $lts}"
 [ -n "$lts" ] && echo "- 移行が要る: ${lts}（v3 は LT を使えない。/tixforge:project update で issue に移す）"
 [ -f "$conf" ] && [ "$(cfg repository.host "$conf")" = none ] \

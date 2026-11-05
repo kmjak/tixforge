@@ -60,7 +60,7 @@ gates: [approach, plan, pr]  # 必ず止まるゲート（pr は常に止まる�
 ## チケット
 
 - **id**：`GT-000123`（issue #123）。
-- **入力**：`gt-000123`（大文字小文字は問わない）・`#123`（issue 番号）・`123`（どちらも issue 番号）。接頭辞付きで桁数が違う id（`GT-00123`）はエラーにして、0 を補わない（打ち間違いで別のチケットを指さないため）。
+- **入力**：`gt-000123`（大文字小文字は問わない）・`#123`・`123`（issue 番号）。接頭辞付きで桁数が違う id（`GT-00123`）はエラーにして、0 を補わない（打ち間違いで別のチケットを指さないため）。
 - **create**：中身はユーザーが書き、Claude は質問で引き出す（案を出すのは「考えて」と頼んだときだけ）。`/tixforge:ticket <作りたいもの>` のように文だけ渡してもよい。似たチケットがあれば示し、大きすぎれば分割を提案する。作った後は「開発を始める／別のチケットを作る／終わる」を選べる。
 - **既定と違うブランチから作る**チケット（hotfix など）は、チケットに `## Base` の節を書く。
 
@@ -123,7 +123,7 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 | 場所 | 判定 | 対象 |
 |------|------|------|
 | run のブランチ・進行中の run の Base | **deny** | force push（`-f`・`--force-with-lease`・`+refspec`、`bash -c`・`eval` 経由も）。必要ならユーザーが `! git push --force-with-lease` で自分で実行する |
-| `GT-` の run のブランチ | **deny** | 本文に `Closes #<番号>` の無い `gh pr create` |
+| run のブランチ | **deny** | 本文に `Closes #<番号>` の無い `gh pr create` |
 | run のブランチ | **ask** | それ以外のすべての push・PR 作成（確認画面に Status・ブランチ・Base・PR の状況が出る） |
 | run のブランチ・進行中の run の Base | **ask** | 許可リストに無い git / gh 操作（merge・rebase・reset・cherry-pick・clean・`commit --amend`・`branch -D`・`switch -f`・`checkout -B`・`fetch +refspec`・`gh pr merge`・書き込みの `gh api` など）と、GitHub / git の MCP ツールの読み取り以外 |
 | 進行中の run の Base | **ask** | Base への commit・push |

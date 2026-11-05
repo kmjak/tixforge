@@ -7,7 +7,7 @@
 1. **現状の確認**：`docs/context/`・`.tixforge/` の有無と中身、git リポジトリかどうか、commit が 1 つでもあるか（`git rev-parse --verify -q HEAD`）、remote（`git remote -v`）。
    `.tixforge/config.yml` が既にある場合（再実行）は読み込み、**値があるキーは尋ねずにそのまま使う**。以降の手順は、値が無いキーについてだけ行う。
 2. **開発の人数**：「1 人で開発しますか？」と尋ねる（答えを使うキー `repository.base_branch`・`review.required` が全てあれば尋ねない）。答えは「ブランチ運用」「レビューの要否」の推奨に使い回す（同じことを 2 度尋ねない）。
-3. **リポジトリ**：tixforge は GitHub のリポジトリを使う（チケットは issue、変更は PR）。config には書かない。
+3. **リポジトリ**：tixforge は GitHub のリポジトリを使う（チケットは issue、変更は PR）。
    - **git リポジトリでない**：`git init` するか尋ねる。するなら `git init -b main` で作る（ブランチ名は「ブランチ運用」で決め、違えばそこで合わせる）。しないなら、tixforge は使えないことを伝えて中止する。
    - **remote がある**：`bash <scripts>/github-preflight.sh` を実行する。
      - `ok: <owner>/<repo>` → 次へ進む。

@@ -114,6 +114,18 @@ eq 2 $? "next is gone"
 tid exists LT-000001 2> /dev/null
 eq 2 $? "exists: a local ticket (v2) is refused"
 has "/tixforge:project update" "$(tid normalize LT-12 2>&1)" "a local id with the wrong digit count also points at update"
+tid number LT-000001 2> /dev/null
+eq 2 $? "number: a local ticket (v2) is refused"
+# A v2 LT that moved, or that v2 finished: the error says so.
+mkdir -p .tixforge/LT-000012 .tixforge/LT-000013
+printf '# LT-000012: A\nStatus: canceled\nReason: GT-000061 に移した\n' > .tixforge/LT-000012/ticket.md
+has "GT-000061 に移した" "$(tid normalize lt-12 2>&1)" "a moved LT names its GT id"
+printf '# LT-000013: B\nStatus: canceled\nReason: 不要になった\n' > .tixforge/LT-000013/ticket.md
+has "v2 で終えた" "$(tid normalize LT-000013 2>&1)" "a dropped LT is finished, not to move"
+# A bare number is an issue even when a v2 LT has it, with a note.
+eq GT-000012 "$(tid normalize 12 2> /dev/null)" "a bare number is still the issue"
+has "注意: 12 は issue #12" "$(tid normalize 12 2>&1)" "a note when a v2 LT has the number"
+rm -rf .tixforge/LT-000012 .tixforge/LT-000013
 
 # detect: an id only in an explicit form, or when the whole text is a number.
 dt() { tid detect "$@" | sed -n "${n:-1}p"; }
@@ -269,6 +281,23 @@ mv .tixforge/config.yml "$tmp/no-conf.yml"
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "no migration before init" ;; *) ok ;; esac
 mv "$tmp/no-conf.yml" .tixforge/config.yml
 rm -rf .tixforge/LT-000003
+# project-status.sh lt: the folders to move, the same ones counted above.
+mkdir -p .tixforge/LT-000003
+printf '# LT-000003: A\nStatus: canceled\nReason: GT-000061 に移した\n' > .tixforge/LT-000003/ticket.md
+printf '| Field | Value |\n|---|---|\n| Status | pr:awaiting-review |\n| Updated | 2026-10-21 16:40 |\n' > .tixforge/LT-000003/state.md
+mkdir -p .tixforge/LT-000005 .tixforge/LT-000006/history
+printf '# LT-000005: B\n\n## 背景\n' > .tixforge/LT-000005/ticket.md
+printf '| Field | Value |\n|---|---|\n| Branch | x |\n' > .tixforge/LT-000006/state.md
+eq "$(printf 'LT-000003\tpr:awaiting-review\tcanceled\tGT-000061 に移した\nLT-000005\t-\topen\t\nLT-000006\t?\tnone\t')" \
+  "$(bash "$scripts/project-status.sh" lt)" "lt lists each folder to move"
+has "移行が要る: LT-000003 LT-000005 LT-000006（" "$(bash "$scripts/project-status.sh")" "the summary counts the same folders"
+rm -rf .tixforge/LT-000003 .tixforge/LT-000005 .tixforge/LT-000006
+# Quoted values are read too.
+printf 'ticket:\n  tracker: "local"\nrepository:\n  host: \x27none\x27   # v2\n' > .tixforge/config.yml
+out=$(bash "$scripts/project-status.sh")
+has "移行が要る: tracker: local（" "$out" "a quoted tracker: local"
+has "移行が要る: repository.host: none（" "$out" "a quoted host: none"
+cp "$tmp/keep-gates.yml" .tixforge/config.yml
 mkdir -p .tixforge/LT-000004/history
 case "$(bash "$scripts/project-status.sh")" in *移行が要る*) ng "a folder with neither file needs nothing" ;; *) ok ;; esac
 sed 's/tracker: github/tracker: local/' "$tmp/keep-gates.yml" > .tixforge/config.yml

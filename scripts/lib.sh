@@ -30,6 +30,36 @@ ensure_workspace() {
 # shellcheck disable=SC2034 # used by ticket-id.sh
 ID_PAD=6
 is_ticket_id() { printf '%s\n' "$1" | grep -Eq '^GT-(0[0-9]{5}|[1-9][0-9]{5,})$'; }
+# lt_info <folder>: what v2 left in a .tixforge/LT-* folder, as
+# "<run>\t<ticket>\t<reason>". run: the Status of state.md, "-" with no
+# state.md, "?" when it has no Status. ticket: open | canceled (in the
+# header, the lines above the first "## ") | none. reason: the header's
+# Reason line.
+lt_info() {
+  local d=$1 run=- t=none r="" h
+  if [ -f "$d/state.md" ]; then
+    run=$(field "$d/state.md" Status)
+    run=${run:-?}
+  fi
+  if [ -f "$d/ticket.md" ]; then
+    h=$(awk '{ sub(/\r$/, "") } /^## / { exit } { print }' "$d/ticket.md")
+    t=open
+    printf '%s\n' "$h" | grep -Eq '^Status: canceled[[:space:]]*$' && t=canceled
+    r=$(printf '%s\n' "$h" | sed -n 's/^Reason: //p' | head -1)
+  fi
+  printf '%s\t%s\t%s\n' "$run" "$t" "$r"
+}
+# lt_pending <run> <ticket>: exit 0 when the folder still has to move: its
+# run is open (whatever the ticket says: a move stopped halfway leaves the
+# ticket canceled and the run open), or with no run, its ticket is open.
+lt_pending() {
+  case $1 in
+    -) [ "$2" = open ] ;;
+    done | canceled) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 # issue_of <id>: the issue number of a GT id, or nothing.
 issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac }
 

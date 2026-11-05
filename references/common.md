@@ -29,7 +29,7 @@
 | そのチケットが実在するか | `bash <scripts>/ticket-id.sh exists <id>` → `issue`・`pull-request`（その番号は PR）・`none` |
 | id → issue 番号 | `bash <scripts>/ticket-id.sh number <GT-id>` |
 
-- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。`detect` の `invalid: <語>` は、`bash <scripts>/ticket-id.sh normalize <語>` を実行してそのエラーを示す。`LT-` のエラーで、`.tixforge/<その LT の id>/ticket.md` に `Reason: <GT-id> に移した` があれば、その `GT-` の id も示し、それで進めるか尋ねる。
+- **id のエラーを自分で直さない。** `normalize` が終了コード 2（桁数違い・形が不正）を返したり、`detect` が `invalid:` を返したりしたら、0 を補う・接頭辞を付けるなどして再実行しない。エラーをそのまま示し、正しい id をユーザーに尋ねる（桁の打ち間違いで別のチケットを指すのを防ぐための規則）。`detect` の `invalid: <語>` は、`bash <scripts>/ticket-id.sh normalize <語>` を実行してそのエラーを示す。`LT-` のエラーが移した先の `GT-` の id を示していれば、それで進めるか尋ねる。`normalize` が `注意:` を出したら、それも示して、その issue でよいか尋ねる。
 - 取り違えを防ぐため、dev・edit・cancel は始めるときに「`<id>`：<チケットのタイトル>」を必ずユーザーに示す。
 
 | 用途 | パス |
@@ -60,7 +60,7 @@
   スクリプトはこの形（2 段までの入れ子・1 行 1 キー・`#` コメント）だけを読む。値は全体を `"…"` で囲むか、まったく囲まない（` #` を含むなら囲む）。
 - 設定に必要なキーが無ければ、推測の既定値で補わず、`/tixforge:project init` の再実行で足せることを伝える（init は全てのキーを書く）。`review.required` が無ければ `true`、`gates` が無ければ `[approach, plan, pr]` として扱う。
 - 上記パスは固定規約。`init` はこの規約どおりの雛形を作るだけで、パスの選択はしない。
-- どのサブコマンドでも、既存ファイルを黙って上書きしない（`GT-` の作業用コピー `.tixforge/<id>/ticket.md` は、issue から作り直すものなので例外。作り直すときは差分を示す）。
+- どのサブコマンドでも、既存ファイルを黙って上書きしない（作業用コピー `.tixforge/<id>/ticket.md` は、issue から作り直すものなので例外。作り直すときは差分を示す）。
 - **キャンセル済みのチケット**（issue の `closed_as` が `canceled`、または `state.md` の `Status` が `canceled`）は、どのサブコマンドでも操作しない。その旨を伝えて止まる。
 
 ### スクリプト（`<scripts>/`）

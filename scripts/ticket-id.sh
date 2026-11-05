@@ -11,7 +11,10 @@
 # case but only with exactly 6 digits (7 or more when the number needs
 # them); a wrong digit count is an error, not padded, so a mistyped id does
 # not silently point at another ticket. #123 and a bare 123 are issue #123.
-# LT- (v2's local tickets) is an error that points at the migration.
+# LT- (v2's local tickets) is an error: it names the GT id the ticket moved
+# to, says the ticket was finished in v2, or points at the migration. A bare
+# number is still an issue when .tixforge/LT-<n> exists, with a note on
+# stderr (in v2 a bare number could mean the LT).
 #
 # detect prints two lines: `id: <id>` (or `id: none`, or `invalid: <token>`)
 # and `rest: <the text without the id>`. An id is taken from GT-/#N (and
@@ -43,6 +46,32 @@ fmt() {
   printf '%s-%s\n' "$1" "$n"
 }
 
+# lt_error <token> <digits>: the error for a v2 local ticket, telling where
+# it went when .tixforge/LT-<n> says so (lt_info).
+lt_error() {
+  local d info run t r
+  d=""
+  case $2 in '' | *[!0-9]*) ;; *) d=$(fmt LT "$2" 2> /dev/null) ;; esac
+  if [ -n "$d" ] && [ -d "$(tf_dir)/$d" ]; then
+    info=$(lt_info "$(tf_dir)/$d")
+    run=${info%%	*}
+    t=${info#*	}
+    r=${t#*	}
+    t=${t%%	*}
+    case $r in
+      GT-*" に移した"*)
+        echo "LT- のチケットは使えない: ${1}（v2 のチケット。${r%% *} に移した。${r%% *} を使う）" >&2
+        return
+        ;;
+    esac
+    lt_pending "$run" "$t" || {
+      echo "LT- のチケットは使えない: ${1}（v2 で終えた・やめたチケット。v3 では扱わない）" >&2
+      return
+    }
+  fi
+  echo "LT- のチケットは使えない: ${1}（v3 はチケットを GitHub issue に置く。/tixforge:project update で issue に移す）" >&2
+}
+
 # norm <token>: canonical id, or an error (exit 2) that shows the right form.
 norm() {
   local t up d
@@ -58,7 +87,7 @@ norm() {
       esac
       ;;
     LT-*)
-      echo "LT- のチケットは使えない: ${t}（v3 はチケットを GitHub issue に置く。/tixforge:project update で issue に移す）" >&2
+      lt_error "$t" "${up#LT-}"
       return 2
       ;;
     GT-*)
@@ -81,6 +110,8 @@ norm() {
       ;;
     *[!0-9]* | '') ;;
     *)
+      d=$(fmt LT "$up") && [ -d "$(tf_dir)/$d" ] \
+        && echo "注意: ${t} は issue #$(printf '%s' "$up" | sed 's/^0*//')。v2 の ${d} とは別のチケット" >&2
       fmt GT "$up"
       return
       ;;
