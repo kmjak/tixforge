@@ -7,10 +7,10 @@
 #   issue-sync.sh create <draft-file>                     create the issue (tixforge:todo); no local copy
 #   issue-sync.sh check <number> [<ticket-file>]          sync verdict, how the issue was closed, details
 #   issue-sync.sh pull <number> <ticket-file> [--accept-edited] [--dry-run]
-#                                                         rebuild the working copy from the issue; prints the diff
+#                                                         rebuild the copy from the issue; prints the diff
 #   issue-sync.sh push <number> <ticket-file> [--force] [--keep-original]
-#                                                         write the working copy to the issue
-#   issue-sync.sh adopt <number> <ticket-file>            working copy from an issue tixforge did not write
+#                                                         write the copy to the issue
+#   issue-sync.sh adopt <number> <ticket-file>            a copy from an issue tixforge did not write
 #   issue-sync.sh body <ticket-file>                      the issue body for a ticket (no GitHub access)
 #
 # check prints `<verdict>` on the first line, then key: value lines:
@@ -35,6 +35,9 @@
 # (exit 5) when the issue's hash has changed since, i.e. someone else pushed
 # an edit after this copy was fetched. create prints number, url and id.
 # push --keep-original first posts the current body as a comment (adopt).
+# pull into a missing snapshot.md first moves v2's working copy there
+# (ticket.md and .issue-hash next to it), so the diff shows what changed
+# on the issue since v2 last took it.
 #
 # Exit: 0 ok, 2 usage, 3 no markers, 4 edited on GitHub, 5 changed since
 #       fetched, 6 the ticket folder already exists (create: the issue was
@@ -247,6 +250,12 @@ case $cmd in
     esac
     id="GT-$(printf '%06d' "$n")" # issue #42 is GT-000042
     write_copy "$tmpd/new" "$id" "$title" "$tmpd/ticket"
+    d=$(dirname "$file")
+    if [ -z "$dry" ] && [ "$(basename "$file")" = snapshot.md ] && [ ! -e "$file" ] && [ -f "$d/ticket.md" ]; then
+      mv "$d/ticket.md" "$file"
+      [ -f "$d/.issue-hash" ] && mv "$d/.issue-hash" "$(hashfile "$file")"
+      echo "moved: $d/ticket.md -> $file (v2's working copy)"
+    fi
     if [ ! -f "$file" ]; then
       if [ -n "$dry" ]; then
         echo "would create: $file"

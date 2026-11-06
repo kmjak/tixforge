@@ -20,4 +20,4 @@ create に渡された id が、tixforge の目印の無い issue（`bash <scrip
 
 1. `bash <scripts>/issue-sync.sh adopt <番号> .tixforge/<id>/editing.md` で、issue の本文から手元のチケットを作る（issue フォームの `### 見出し` はチケットの `## 見出し` に、未回答は「なし」になる）。GitHub はまだ変えない。
 2. できたチケットを示し、create の対話と同じ決まりで足りない項目を埋める（要件を捏造しない）。
-3. 確認一覧に「issue の本文を tixforge の形式に書き換える。元の本文はコメントに残す」を載せ、合意を得てから `bash <scripts>/issue-sync.sh push <番号> .tixforge/<id>/editing.md --force --keep-original` を実行する。`tixforge:*` のラベルが無ければ `bash <scripts>/issue-label.sh <番号> reset` で `tixforge:todo` を付ける。書き戻したら `editing.md` と `.editing.md.hash` を消す。
+3. 確認一覧に「issue の本文を tixforge の形式に書き換える。元の本文はコメントに残す」を載せ、合意を得てから `bash <scripts>/issue-sync.sh push <番号> .tixforge/<id>/editing.md --force --keep-original` を実行する。`tixforge:*` のラベルが無ければ `bash <scripts>/issue-label.sh <番号> reset` で `tixforge:todo` を付ける。書き戻したとき、または書き戻さずに止まるときは、`editing.md` と `.editing.md.hash` を消す。

@@ -23,7 +23,8 @@
 
 `editing.md` が取ってくる前から既にあれば、前の edit が書き戻す前に止まったもの。手順 3 まで（状況を見る）を済ませた後、手順 4 の代わりに次を行う：
 
-- `bash <scripts>/issue-sync.sh pull <番号> .tixforge/<ticket-id>/editing.md --dry-run` で issue との差分を示し、「続きとして使う」「捨てる」を尋ねる。
+- `.editing.md.hash` が無い（adopt の途中で止まった）、または `check` の `local` が `same`（変えていない）なら、尋ねずに `editing.md` と `.editing.md.hash` を消してから、手順 4 で取ってくる。
+- それ以外なら、issue との差分を示す：判定が `in-sync`・`no-hash` なら `bash <scripts>/issue-sync.sh pull <番号> .tixforge/<ticket-id>/editing.md --dry-run`、`edited` なら同じく `--accept-edited --dry-run`。`no-markers` なら、手順 4 の `no-markers` の扱いに従う。差分を示したら「続きとして使う」「捨てる」を尋ねる。
 - **続きとして使う** — 取ってこない。書き戻しで他の人の変更とぶつかれば、`sync.md` のとおり止まる。
 - **捨てる** — `editing.md` と `.editing.md.hash` を消してから、手順 4 で取ってくる。
 

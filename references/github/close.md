@@ -16,4 +16,3 @@
 - 確認一覧には「issue を削除せずに閉じる（予定なし）。`tixforge:canceled` にする」と載せる（`closed-not-planned` のときは「`tixforge:canceled` にする」だけ）。
 - issue を **削除せずに** `gh issue close <番号> --reason "not planned" --comment "Canceled by tixforge: <理由>"` で閉じ、`bash <scripts>/issue-label.sh <番号> canceled` を実行する。
 - チケットの状態が `closed-not-planned`（手で閉じられた）のときは、閉じる操作を省き、`issue-label.sh <番号> canceled` だけを行う。
-- 手元のコピーには書き足さない（キャンセル済みかどうかは issue が表す）。

@@ -422,8 +422,9 @@ section="review-input.sh"
 git switch -q GT-000901-a
 echo change > file.txt && git add file.txt && git commit -q -m change
 # No snapshot yet: dev takes it when the run starts.
-bash "$scripts/review-input.sh" GT-000901 main > /dev/null 2>&1
+out=$(bash "$scripts/review-input.sh" GT-000901 main 2> /dev/null)
 eq 3 $? "no snapshot: exit 3"
+eq "" "$out" "no snapshot: nothing written or printed"
 printf '# GT-000901: A\n\n## 背景\nスナップショット\n' > .tixforge/GT-000901/snapshot.md
 paths=$(bash "$scripts/review-input.sh" GT-000901 main)
 diff_file=$(printf '%s\n' "$paths" | sed -n 1p)
@@ -697,12 +698,28 @@ eq "local: same" "$(is check 46 .tixforge/GT-000046/ticket.md | sed -n 3p)" "che
 eq "local: missing" "$(is check 46 "$tmp/none.md" | sed -n 3p)" "check: no copy"
 # dev's snapshot and edit's editing.md keep their own hash: pulling the
 # snapshot does not lift the lock of an edit fetched before it.
-is pull 46 .tixforge/GT-000046/editing.md > /dev/null
 cp "$GH_DIR/issue-46.json" "$tmp/keep46"
-jq --arg b "$(sed 's/他の人の変更/また別の変更/' "$tmp/body42")" '.body = $b' "$GH_DIR/issue-46.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-46.json"
+is pull 46 .tixforge/GT-000046/editing.md > /dev/null
+cp .tixforge/GT-000046/editing.md "$tmp/mine46b"
+sed 's/他の人の変更/さらに別の人の変更/' .tixforge/GT-000046/editing.md > "$tmp/other46"
+is push 46 "$tmp/other46" > /dev/null 2>&1 # another person's push from a fresh copy
 is pull 46 .tixforge/GT-000046/snapshot.md > /dev/null
 [ -f .tixforge/GT-000046/.snapshot.md.hash ] && [ -f .tixforge/GT-000046/.editing.md.hash ] && ok || ng "one hash file per copy"
+sed 's/ログインできる/私の変更/' "$tmp/mine46b" > .tixforge/GT-000046/editing.md
+is push 46 .tixforge/GT-000046/editing.md > /dev/null 2>&1
+eq 5 $? "pulling the snapshot keeps the edit's lock"
+has "さらに別の人の変更" "$(jq -r .body "$GH_DIR/issue-46.json")" "the other person's change is kept"
 cp "$tmp/keep46" "$GH_DIR/issue-46.json"
+rm -f .tixforge/GT-000046/editing.md .tixforge/GT-000046/.editing.md.hash .tixforge/GT-000046/snapshot.md .tixforge/GT-000046/.snapshot.md.hash
+# v2's working copy becomes the snapshot, so a change made since shows.
+is pull 46 .tixforge/GT-000046/ticket.md > /dev/null
+sed 's/他の人の変更/v2 のときの内容/' .tixforge/GT-000046/ticket.md > "$tmp/v2t" && cp "$tmp/v2t" .tixforge/GT-000046/ticket.md
+mv .tixforge/GT-000046/.ticket.md.hash .tixforge/GT-000046/.issue-hash
+out=$(is pull 46 .tixforge/GT-000046/snapshot.md)
+has "moved: " "$out" "v2's ticket.md moves to snapshot.md"
+has "v2 のときの内容" "$out" "and the diff shows what changed since"
+[ ! -e .tixforge/GT-000046/ticket.md ] && [ -f .tixforge/GT-000046/.snapshot.md.hash ] && [ ! -e .tixforge/GT-000046/.issue-hash ] && ok || ng "ticket.md and .issue-hash are moved"
+rm -f .tixforge/GT-000046/snapshot.md .tixforge/GT-000046/.snapshot.md.hash
 eq "assignees: " "$(is check 46 | tail -1)" "check: no assignee"
 jq '.assignees = [{"login":"me"},{"login":"someone"}]' "$GH_DIR/issue-46.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-46.json"
 eq "assignees: me,someone" "$(is check 46 | tail -1)" "check: assignees on the last line"
