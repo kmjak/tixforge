@@ -8,8 +8,8 @@
    - `completed` — 呼び出し元の「完了済み」の扱いに従う。
    - `canceled` — その旨を伝えて止まる（どのサブコマンドでも操作しない）。
    - `closed-completed`・`closed-not-planned`・`closed` — tixforge 以外の方法で閉じられた（手で閉じたなど）。呼び出し元に扱いがあればそれに従う。無ければ状況（`state_reason`・`labels`）を示して止まり、どうするか尋ねる。勝手に開き直さない。`closed-not-planned` なら、`/tixforge:ticket cancel` でキャンセルとして記録し直せることを添える。
-4. **判定ごとに取ってくる**（開いているチケット）：
-   - **`in-sync`・`no-hash`** → `bash <scripts>/issue-sync.sh pull <番号> <ファイル>`。出力が `unchanged`・`created` 以外なら、何が変わったかを一行で伝え、呼び出し元に「変更あり」として返す（進行中の run があれば、呼び出し元が `<plugin>/skills/dev/rewind.md`「チケットが変わったとき」でフェーズを戻すか判断する）。
+4. **判定ごとに取ってくる**（開いているチケット）。dev（`snapshot.md`）で `check` の `base` が `changed`（手元に書き戻していない変更がある）なら、取ってくる前に `pull … --dry-run` で差分を示し、「書き戻す」（`sync.md`）か「捨てる」（そのまま取ってくる）かを尋ねる。edit（`editing.md`）は下の「編集の続き」に従う。
+   - **`in-sync`・`no-hash`** → `bash <scripts>/issue-sync.sh pull <番号> <ファイル>`。出力の `moved:` の行（v2 のコピーを移した知らせ）は判定に含めない。それ以外の出力が `unchanged`・`created` 以外なら、何が変わったかを一行で伝え、呼び出し元に「変更あり」として返す（進行中の run があれば、呼び出し元が `<plugin>/skills/dev/rewind.md`「チケットが変わったとき」でフェーズを戻すか判断する）。
    - **`edited`**（GitHub 上で直接編集された）→ `bash <scripts>/issue-sync.sh pull <番号> <ファイル> --accept-edited --dry-run` の差分を示し、AskUserQuestion で尋ねる：
      - **取り込む（推奨）** — `bash <scripts>/issue-sync.sh pull <番号> <ファイル> --accept-edited` で手元を作り直し、`bash <scripts>/issue-sync.sh push <番号> <ファイル> --force` でハッシュを付け直す（`tixforge:out-of-sync` も外れる）。以降は「変更あり」として扱う。
      - **直接編集を取り消す** — `check` の `local` が `same` のとき**だけ**出す（手元のコピーが tixforge が最後に書いた版と同じ＝最新の正しい版）。`bash <scripts>/issue-sync.sh push <番号> <ファイル> --force` で手元の内容に戻す。`differs`・`missing` のときは、手元が古い可能性があるので出さない。
@@ -21,11 +21,14 @@
 
 ## 編集の続き（edit）
 
-`editing.md` が取ってくる前から既にあれば、前の edit が書き戻す前に止まったもの。手順 3 まで（状況を見る）を済ませた後、手順 4 の代わりに次を行う：
+`editing.md` が取ってくる前から既にあれば、前の edit が書き戻す前に止まったもの。手順 3 まで（状況を見る）を済ませた後、手順 4 の代わりに `check <番号> .tixforge/<ticket-id>/editing.md` の `base`・`remote` で分ける：
 
-- `.editing.md.hash` が無い（adopt の途中で止まった）、または `check` の `local` が `same`（変えていない）なら、尋ねずに `editing.md` と `.editing.md.hash` を消してから、手順 4 で取ってくる。
-- それ以外なら、issue との差分を示す：判定が `in-sync`・`no-hash` なら `bash <scripts>/issue-sync.sh pull <番号> .tixforge/<ticket-id>/editing.md --dry-run`、`edited` なら同じく `--accept-edited --dry-run`。`no-markers` なら、手順 4 の `no-markers` の扱いに従う。差分を示したら「続きとして使う」「捨てる」を尋ねる。
-- **続きとして使う** — 取ってこない。書き戻しで他の人の変更とぶつかれば、`sync.md` のとおり止まる。
+- **`base: none`**（ハッシュが無い。adopt の途中で止まったなど）— 中身を示し、「捨てる」か「止める」かを尋ねる（ハッシュが無いと、書き戻すときに他の人の変更とのぶつかりを検出できないため、続きには使わない）。
+- **`base: same`**（変えていない）— 尋ねずに捨てる。
+- **`base: changed`・`remote: same`**（前の edit の変更があり、その後 issue は変わっていない）— `pull … --dry-run` の差分（＝前の edit の変更）を示し、「続きとして使う」「捨てる」を尋ねる。
+- **`base: changed`・`remote: changed`**（前の edit の変更の後に、issue も変わった）— 差分には前の edit の変更と他の人の変更が混ざり、見分けられない。`editing.md` の中身を示し、捨てて取り直すよう勧める（前の変更は、取り直した後に手で当て直す）。「捨てる」「止める」を尋ねる。
+
+- **続きとして使う** — 取ってこない。edit の手順 4 では、issue との差分全体（前の edit の変更を含む）を示す。
 - **捨てる** — `editing.md` と `.editing.md.hash` を消してから、手順 4 で取ってくる。
 
 ## 探す

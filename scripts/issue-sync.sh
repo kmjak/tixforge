@@ -29,6 +29,11 @@
 #               for the release) | completed | canceled | closed-completed |
 #               closed-not-planned | closed (the last three: closed some
 #               other way, with GitHub's reason)
+#   base        same | changed | none (with a ticket file): the file against
+#               the version it was taken or last written at (.<name>.hash);
+#               changed = edits not written back yet. none: no file or hash
+#   remote      same | changed | none: the issue against that same version;
+#               changed = someone wrote to the issue since
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
 # pull records the hash it saw next to the file (.<name>.hash); push refuses
@@ -222,6 +227,26 @@ case $cmd in
       fi
     fi
     echo "status: $(ticket_status "$ca")"
+    # base / remote: the copy and the issue against the version the copy was
+    # taken (or last written) at, kept in .<name>.hash.
+    if [ $# -eq 2 ]; then
+      hf=$(hashfile "$2")
+      if [ -f "$2" ] && [ -f "$hf" ]; then
+        if [ "$(bash "$hash_sh" hash "$(ticket_title "$2")" < "$tmpd/mine")" = "$(cat "$hf")" ]; then
+          echo "base: same"
+        else
+          echo "base: changed"
+        fi
+        if [ "$(stored_hash)" = "$(cat "$hf")" ]; then
+          echo "remote: same"
+        else
+          echo "remote: changed"
+        fi
+      else
+        echo "base: none"
+        echo "remote: none"
+      fi
+    fi
     echo "title: $title"
     echo "state: $state"
     echo "state_reason: $reason"
@@ -251,7 +276,12 @@ case $cmd in
     id="GT-$(printf '%06d' "$n")" # issue #42 is GT-000042
     write_copy "$tmpd/new" "$id" "$title" "$tmpd/ticket"
     d=$(dirname "$file")
-    if [ -z "$dry" ] && [ "$(basename "$file")" = snapshot.md ] && [ ! -e "$file" ] && [ -f "$d/ticket.md" ]; then
+    if [ "$(basename "$file")" = snapshot.md ] && [ ! -e "$file" ] && [ -f "$d/ticket.md" ]; then
+      if [ -n "$dry" ]; then
+        echo "would move: $d/ticket.md -> $file (v2's working copy)"
+        diff -u --label "$d/ticket.md (v2)" --label "$file (issue #$n)" "$d/ticket.md" "$tmpd/new" || true
+        exit 0
+      fi
       mv "$d/ticket.md" "$file"
       [ -f "$d/.issue-hash" ] && mv "$d/.issue-hash" "$(hashfile "$file")"
       echo "moved: $d/ticket.md -> $file (v2's working copy)"

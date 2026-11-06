@@ -425,6 +425,7 @@ echo change > file.txt && git add file.txt && git commit -q -m change
 out=$(bash "$scripts/review-input.sh" GT-000901 main 2> /dev/null)
 eq 3 $? "no snapshot: exit 3"
 eq "" "$out" "no snapshot: nothing written or printed"
+[ ! -e .git/tixforge/review/GT-000901 ] && ok || ng "no snapshot: no review folder"
 printf '# GT-000901: A\n\n## 背景\nスナップショット\n' > .tixforge/GT-000901/snapshot.md
 paths=$(bash "$scripts/review-input.sh" GT-000901 main)
 diff_file=$(printf '%s\n' "$paths" | sed -n 1p)
@@ -720,6 +721,36 @@ has "moved: " "$out" "v2's ticket.md moves to snapshot.md"
 has "v2 のときの内容" "$out" "and the diff shows what changed since"
 [ ! -e .tixforge/GT-000046/ticket.md ] && [ -f .tixforge/GT-000046/.snapshot.md.hash ] && [ ! -e .tixforge/GT-000046/.issue-hash ] && ok || ng "ticket.md and .issue-hash are moved"
 rm -f .tixforge/GT-000046/snapshot.md .tixforge/GT-000046/.snapshot.md.hash
+# The move only for a missing snapshot.md, never in a dry run or for
+# editing.md.
+printf '# GT-000046: v2\n\n## 背景\nv2\n' > .tixforge/GT-000046/ticket.md
+out=$(is pull 46 .tixforge/GT-000046/snapshot.md --dry-run)
+has "would move: " "$out" "dry run: the move is announced"
+has "v2" "$out" "dry run: the diff is against v2's copy"
+[ -f .tixforge/GT-000046/ticket.md ] && [ ! -e .tixforge/GT-000046/snapshot.md ] && ok || ng "dry run moves nothing"
+is pull 46 .tixforge/GT-000046/editing.md > /dev/null
+[ -f .tixforge/GT-000046/ticket.md ] && ok || ng "editing.md does not take v2's copy"
+rm .tixforge/GT-000046/ticket.md
+is pull 46 .tixforge/GT-000046/snapshot.md > /dev/null
+printf '# GT-000046: v2\n' > .tixforge/GT-000046/ticket.md
+has "unchanged: " "$(is pull 46 .tixforge/GT-000046/snapshot.md)" "an existing snapshot is kept"
+[ -f .tixforge/GT-000046/ticket.md ] && ok || ng "an existing snapshot leaves v2's copy alone"
+# base / remote: the copy and the issue against the version it was taken at.
+f46=.tixforge/GT-000046/snapshot.md
+eq "base: same" "$(is check 46 "$f46" | grep '^base:')" "base: same right after pull"
+eq "remote: same" "$(is check 46 "$f46" | grep '^remote:')" "remote: same right after pull"
+sed 's/ログインできる/書き戻していない変更/' "$f46" > "$tmp/b46" && cp "$tmp/b46" "$f46"
+eq "base: changed" "$(is check 46 "$f46" | grep '^base:')" "base: changed after a local edit"
+cp "$GH_DIR/issue-46.json" "$tmp/keep46"
+{
+  cat .tixforge/GT-000046/editing.md
+  printf -- '- また誰かの変更\n'
+} > "$tmp/someone46"
+is push 46 "$tmp/someone46" > /dev/null 2>&1
+eq "remote: changed" "$(is check 46 "$f46" | grep '^remote:')" "remote: changed after someone else's push"
+eq "base: none" "$(is check 46 "$tmp/none.md" | grep '^base:')" "base: none without a copy"
+cp "$tmp/keep46" "$GH_DIR/issue-46.json"
+rm -f .tixforge/GT-000046/*.md .tixforge/GT-000046/.*.hash
 eq "assignees: " "$(is check 46 | tail -1)" "check: no assignee"
 jq '.assignees = [{"login":"me"},{"login":"someone"}]' "$GH_DIR/issue-46.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-46.json"
 eq "assignees: me,someone" "$(is check 46 | tail -1)" "check: assignees on the last line"
