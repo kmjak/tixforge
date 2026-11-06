@@ -33,7 +33,8 @@
 #               the version it was taken or last written at (.<name>.hash);
 #               changed = edits not written back yet. none: no file or hash
 #   remote      same | changed | none: the issue against that same version;
-#               changed = someone wrote to the issue since
+#               changed = someone wrote to the issue since (with tixforge or
+#               directly on GitHub)
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
 # pull records the hash it saw next to the file (.<name>.hash); push refuses
@@ -111,6 +112,11 @@ verdict() {
 }
 
 stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2> /dev/null || true; }
+# issue_hash: the hash of the issue's ticket as it is now (title + the part
+# between the markers). The copies keep this in .<name>.hash: unlike the
+# hash written in the body, it changes with a direct edit on GitHub too,
+# and it exists when the body has no hash line.
+issue_hash() { bash "$hash_sh" hash "$title" < "$tmpd/ticket"; }
 
 has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 
@@ -237,7 +243,7 @@ case $cmd in
         else
           echo "base: changed"
         fi
-        if [ "$(stored_hash)" = "$(cat "$hf")" ]; then
+        if [ "$(issue_hash)" = "$(cat "$hf")" ]; then
           echo "remote: same"
         else
           echo "remote: changed"
@@ -302,7 +308,7 @@ case $cmd in
       diff -u --label "$file (before)" --label "$file (issue #$n)" "$file" "$tmpd/new"
       [ -n "$dry" ] || cat "$tmpd/new" > "$file"
     fi
-    [ -n "$dry" ] || stored_hash > "$(hashfile "$file")"
+    [ -n "$dry" ] || issue_hash > "$(hashfile "$file")"
     ;;
 
   push)
@@ -325,7 +331,7 @@ case $cmd in
       } ;;
     esac
     # Optimistic lock: the issue must still be the version this copy came from.
-    if [ -z "$force" ] && [ -f "$(hashfile "$file")" ] && [ "$(cat "$(hashfile "$file")")" != "$(stored_hash)" ]; then
+    if [ -z "$force" ] && [ -f "$(hashfile "$file")" ] && [ "$(cat "$(hashfile "$file")")" != "$(issue_hash)" ]; then
       echo "changed: issue #$n は、このコピーを取ってきた後に更新されています（他の人の edit の可能性）。取ってき直して差分を確かめてから編集し直してください" >&2
       exit 5
     fi
