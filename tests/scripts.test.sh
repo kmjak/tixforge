@@ -635,6 +635,19 @@ has "created" "$(is pull 44 .tixforge/GT-000044/ticket.md)" "pull an issue witho
 eq "base: same remote: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:\|^remote:' | paste -sd' ' -)" "no hash line in the body: base and remote still work"
 tr -d '\r' < .tixforge/GT-000044/ticket.md | sed 's/$/\r/' > "$tmp/crlf44" && cp "$tmp/crlf44" .tixforge/GT-000044/ticket.md
 eq "base: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:')" "base: CRLF is not a change"
+# With no hash line in the body, a direct edit is caught by the lock.
+is pull 44 .tixforge/GT-000044/ticket.md > /dev/null
+sed 's/ログインできる/直接の変更/' "$tmp/nohash" > "$tmp/nohash2"
+issue 44 "ログイン" "$tmp/nohash2"
+sed 's/ログインしたい/私の変更/' .tixforge/GT-000044/ticket.md > "$tmp/mine44" && cp "$tmp/mine44" .tixforge/GT-000044/ticket.md
+is push 44 .tixforge/GT-000044/ticket.md > /dev/null 2>&1
+eq 5 $? "no hash line: push refuses after a direct edit"
+# Text before the first ## in the body: not a change of the copy.
+awk '{ print } /tixforge:ticket:start/ { print "前置き" }' "$tmp/nohash" > "$tmp/intro44"
+issue 44 "ログイン" "$tmp/intro44"
+rm -f .tixforge/GT-000044/ticket.md .tixforge/GT-000044/.ticket.md.hash
+is pull 44 .tixforge/GT-000044/ticket.md > /dev/null
+eq "base: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:')" "base: text before the first ## is not a change"
 
 # Canceled issue: Status / Reason come back.
 sed '1s/.*/# <ticket-id>: やめた/' "$tmp/draft.md" > "$tmp/draft45"

@@ -37,9 +37,10 @@
 #               directly on GitHub)
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
-# pull records the hash it saw next to the file (.<name>.hash); push refuses
-# (exit 5) when the issue's hash has changed since, i.e. someone else pushed
-# an edit after this copy was fetched. create prints number, url and id.
+# pull records the hash of the issue's ticket next to the file (.<name>.hash);
+# push refuses (exit 5) when the issue has changed since, i.e. someone wrote
+# to it (with tixforge, or directly when the body has no hash line) after
+# this copy was fetched. create prints number, url and id.
 # push --keep-original first posts the current body as a comment (adopt).
 # pull into a missing snapshot.md first moves v2's working copy there
 # (ticket.md and .issue-hash next to it), so the diff shows what changed
@@ -116,7 +117,8 @@ stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2> /dev/null || true; }
 # between the markers). The copies keep this in .<name>.hash: unlike the
 # hash written in the body, it changes with a direct edit on GitHub too,
 # and it exists when the body has no hash line.
-issue_hash() { bash "$hash_sh" hash "$title" < "$tmpd/ticket"; }
+# Lines before the first "## " are dropped, as a copy has none (write_copy).
+issue_hash() { awk '/^## / { on = 1 } on' "$tmpd/ticket" | bash "$hash_sh" hash "$title"; }
 
 has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 
