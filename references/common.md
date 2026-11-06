@@ -51,7 +51,7 @@
 |------|------|
 | サービス／ドメイン知識 | `docs/context/**`（必要な分だけ読む。git 管理する） |
 | tixforge 設定 | `.tixforge/config.yml`（git 管理する。チーム共通） |
-| チケット | `.tixforge/<ticket-id>/ticket.md`（**git 管理外**）— issue から作る作業用のコピー（`references/github/fetch.md`） |
+| チケット | `.tixforge/<ticket-id>/snapshot.md`（**git 管理外**）— dev が issue から取った版（「取ってくる」）。edit は `.tixforge/<ticket-id>/editing.md` で書き換え、書き戻したら消す |
 | run の状態 | `.tixforge/<ticket-id>/state.md`（**git 管理外**。`<scripts>/run-state.sh` で作り、ヘッダを更新する） |
 | ブランチ名 | `<ticket-id>-<slug>`（チケット id を接頭辞にする。slug は英小文字・数字・ハイフン） |
 
@@ -75,7 +75,7 @@
   スクリプトはこの形（2 段までの入れ子・1 行 1 キー・`#` コメント）だけを読む。値は全体を `"…"` で囲むか、まったく囲まない（` #` を含むなら囲む）。
 - 設定に必要なキーが無ければ、推測の既定値で補わず、`/tixforge:project init` の再実行で足せることを伝える（init は全てのキーを書く）。`review.required` が無ければ `true`、`gates` が無ければ `[approach, plan, pr]` として扱う。
 - 上記パスは固定規約。`init` はこの規約どおりの雛形を作るだけで、パスの選択はしない。
-- どのサブコマンドでも、既存ファイルを黙って上書きしない（作業用コピー `.tixforge/<id>/ticket.md` は、issue から作り直すものなので例外。作り直すときは差分を示す）。
+- どのサブコマンドでも、既存ファイルを黙って上書きしない（`snapshot.md`・`editing.md` は issue から作り直すものなので例外。作り直すときは差分を示す）。
 - **キャンセル済みのチケット**（チケットの状態が `canceled`、または `state.md` の `Status` が `canceled`）は、どのサブコマンドでも操作しない。その旨を伝えて止まる。
 
 ### スクリプト（`<scripts>/`）

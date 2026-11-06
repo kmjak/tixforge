@@ -17,7 +17,7 @@
 
 **チケットの準備**（新規・再開のどちらでも、続けて行う）：
 
-- チケットを「取ってくる」（`references/github/fetch.md` を Read し、その手順で行う。手元のコピーは毎回作り直す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。チケットの状態が `canceled` なら、下の 0. に従う。`completed` なら、状態ファイルで分ける：
+- チケットを「取ってくる」（`references/github/fetch.md` を Read し、その手順で行う。`<ファイル>` は `.tixforge/<ticket-id>/snapshot.md`。v2 の `ticket.md` があれば、`pull` がそれを `snapshot.md` に移してから差分を出す）。「変更あり」で、進行中の run（状態ファイルがあり、`Status` が `done`・`canceled` 以外）がある場合は、`<plugin>/skills/dev/rewind.md` を Read し、その「チケットが変わったとき」の手順でフェーズを戻すか決めてから再開する。チケットの状態が `canceled` なら、下の 0. に従う。`completed` なら、状態ファイルで分ける：
   - `Status` が `pr:*` → 下の 1. の `pr:*` へ進む（マージでチケットが閉じた後の再開。pr.md の「再開」で `done` にする）。
   - 状態ファイルが無い・`done` → 完了済みであることを伝えて止まる。
   - それより前のフェーズ → チケットが閉じていることと `Status` を示し、どうするか尋ねる。
@@ -41,7 +41,7 @@
 
 このファイルを run の単一の真実とする。
 
-- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `ticket.md`、issue 番号は id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
+- **ヘッダ表**（`Status`・`Branch`・`Base`・`Updated`・`Format`）は `run-state.sh` だけで書き換える（`bash <scripts>/run-state.sh set <ticket-id> <Status|Branch|Base> <値>`。チケットは同じフォルダの `snapshot.md`、issue 番号は id から分かるので、ヘッダには持たない。`Updated` は自動で更新される）。表を手で編集しない。
 - **セクション**（`## Research`・`## Approach`・`## Plan`・`## Implementation Log`・`## Review`・`## PR`）は各フェーズが Edit で書く。本文はドキュメント言語、見出しは英語の固定キーのまま変えない（このスキルが参照・再開に使うため）。
 - フェーズのセクションを書いたら、**続けて** `Status` を更新する（セクション → Status の順。逆にすると、中断したときに空のセクションのまま承認待ちになる）。
 - 承認を受けて（またはゲートを自動で通過して）次のフェーズへ進むときは、作業を始める前に `Status` を `<次のphase>:in-progress` にする。
@@ -78,14 +78,15 @@
 
 目的：どう実装するか決める前に、実装に必要な情報を整理し、チケットの未決事項を片付ける。
 
-1. チケット（`.tixforge/<ticket-id>/ticket.md`）を読む。
+1. チケット（`.tixforge/<ticket-id>/snapshot.md`）を読む。
 2. `docs/context/**` の関連箇所（必要な分だけ）を読む。
 3. **コードの調査は Explore agent に任せる**（このセッションの文脈を、Implement の前に調査の読み込みで使い切らないため）。リポジトリが小さく見えても、`find`・Grep・Read でコードを調べ始める前に、まず Explore を起動する（Agent ツールで `subagent_type: Explore`）。チケットの要約と、具体的な問い（影響しそうなコード領域・似た既存実装・テストの場所と書き方・守るべき制約など）を渡し、ファイルパス付きの要約を受け取る。自分で調べてよいのは、Explore が使えない環境だけ。受け取った要約のうち、判断に必要な箇所は自分でも Read して確かめる。
 4. 整理する：チケットの要求、関連コンテキスト、影響しそうなコード領域、制約、未解決の疑問点。
 5. **未決事項を片付ける**：チケットの「未決事項」を 1 項目ずつ並べ、項目ごとに次のどれかをユーザーと決める（決めるのはユーザー。Claude は調査の結果と推奨を示す）：
-   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ チケットに書き戻す：その項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。`references/github/sync.md` を Read し、「書き戻す」を行う。
-   - **どう作るかの決定**（実装の選び方）→ Approach の「未決事項の解決」の表に書く（Phase 2）。チケットの未決事項は、表を指す 1 行（「Approach で決定」）に置き換える。
-   - **対象外に回す** → チケットの「対象外」に移す。
+   - **何を作るかの決定**（要件・受け入れ条件・対象外が変わる）→ `snapshot.md` のその項目を「未決事項」から消し、要件・受け入れ条件・対象外の該当する場所に移す。
+   - **どう作るかの決定**（実装の選び方）→ Approach の「未決事項の解決」の表に書く（Phase 2）。`snapshot.md` の未決事項は、表を指す 1 行（「Approach で決定」）に置き換える。
+   - **対象外に回す** → `snapshot.md` の「対象外」に移す。
+   - どれでも `snapshot.md` を変えたら、そのたびに `references/github/sync.md` を Read し、「書き戻す」を行う（`<ファイル>` は `snapshot.md`）。次に取ってきたときに、手元の変更が issue の内容で上書きされないようにするため。
    決まらない項目が 1 つでも残っていれば、Research のゲートで止まる（`gates` に無くても）。
 6. 結果を `## Research` に書き、ゲート（`research`）へ。止まるなら `Status: research:awaiting-approval` にして要約を出し（未解決の疑問点と未決事項を強調）、停止。
 
@@ -173,12 +174,12 @@
 1. **agent の確認**：利用できる agent に `tixforge:reviewer` と `tixforge:quality-reviewer` があることを確認する（どちらも tixforge plugin に同梱されている）。無ければ停止し、tixforge plugin が有効になっているか（`/plugin`）を確かめるよう案内する。**general-purpose など別の agent で代用しない**（レビューの基準が変わるため）。
 2. **再開のとき**：`## Review` の最新ラウンドに、「決定」が書かれていない指摘があれば、新しいラウンドを起こさずに、その指摘の対処を決めるところ（手順 6）から続ける。
 3. **検証**の結果を用意する。`Implementation Log` の最新の `Verification @` が現在の HEAD（`git rev-parse --short HEAD`。`+dirty` 無し）に対するもので全て pass（または「検証コマンドなし」）ならそれを使い、そうでなければ `bash <scripts>/verify.sh` を実行し直す。失敗があれば Review に進まず、`Status: implement:in-progress` に戻して Implement の「検証」で扱う。
-4. **レビューの入力を書き出す**：`bash <scripts>/review-input.sh <ticket-id> <Base>` を実行する。2 ラウンド目以降は `--since <前のラウンドの Verification の hash>` を付け、前のラウンドからの差分（`delta.patch`）も書き出す。出力されるパス（`.git/tixforge/review/<ticket-id>/`）を使う。差分の中身をこのセッションで読む必要はない。
+4. **レビューの入力を書き出す**：`bash <scripts>/review-input.sh <ticket-id> <Base>` を実行する。2 ラウンド目以降は `--since <前のラウンドの Verification の hash>` を付け、前のラウンドからの差分（`delta.patch`）も書き出す。出力されるパス（`.git/tixforge/review/<ticket-id>/`。最後の行がチケットの `ticket.md`）を使う。終了コード 3（`snapshot.md` が無い）なら、チケットを「取ってくる」（`<ファイル>` は `snapshot.md`）からやり直す。差分の中身をこのセッションで読む必要はない。
 5. **2 つの reviewer を並列に起動する**（1 つのメッセージで 2 つの Agent 呼び出し）。ラウンドごとに新しく起動する（前のラウンドの agent を使い回さない）。渡すのは次のものだけにする：
-   - 両方に：4 のファイルのパス（`delta.patch` を含む）、検証の行、ドキュメント言語、前のラウンドまでに「受け入れ」と決まったその agent の指摘と理由（同じ指摘を繰り返させないため）、前のラウンドで「修正」と決まったその agent の指摘（直ったかを確かめさせるため）
-   - `tixforge:reviewer` にだけ：チケットのパス（`.tixforge/<ticket-id>/ticket.md`）、`## Approach` と `## Plan` の本文（そのまま貼る。未決事項の解決の表と対応表を含む）、手動確認の行
+   - 両方に：4 のファイルのうち `ticket.md` 以外のパス（`delta.patch` を含む）、検証の行、ドキュメント言語、前のラウンドまでに「受け入れ」と決まったその agent の指摘と理由（同じ指摘を繰り返させないため）、前のラウンドで「修正」と決まったその agent の指摘（直ったかを確かめさせるため）
+   - `tixforge:reviewer` にだけ：4 で書き出したチケットのパス（`ticket.md`）、`## Approach` と `## Plan` の本文（そのまま貼る。未決事項の解決の表と対応表を含む）、手動確認の行
 
-   **`## Research`・`## Implementation Log` の判断・実装中の経緯は渡さない**（実装者の意図に引きずられず、合意と成果物だけで判定させるため）。`.tixforge/` 配下のパスは、チケットのファイル以外は渡さない。
+   **`## Research`・`## Implementation Log` の判断・実装中の経緯は渡さない**（実装者の意図に引きずられず、合意と成果物だけで判定させるため）。`.tixforge/` 配下のパスは渡さない。
 6. **結果を記録する**：`## Review` に**ラウンドとして追記する**（`### Round 1`、`### Round 2` …）。前のラウンドは書き換えない。各ラウンドには、検証の行と、両方の reviewer の指摘を**全件そのまま**載せる（指摘が無ければその旨）。
    - **reviewer の指摘を削除・統合・言い換え・並べ替えしない。** 誤検知だと思っても消さず、推奨欄でそう述べる。
    - 各指摘の下に、このセッションの**推奨**（下の 4 つのどれか）と**根拠**を添える。根拠には `## Implementation Log` の判断や実装中の経緯を使ってよい（reviewer が知らない情報を補うのがこのセッションの役割）。

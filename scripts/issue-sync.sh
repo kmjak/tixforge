@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# GitHub tickets (GT-<n>) and their issues. The issue is the source of truth;
-# .tixforge/<id>/ticket.md is a working copy that is not in git and is
-# rebuilt from the issue. See references/github/.
+# GitHub tickets (GT-<n>) and their issues. The issue is the source of truth.
+# A ticket file is a copy of it, not in git: dev keeps the version it took in
+# .tixforge/<id>/snapshot.md, edit works on .tixforge/<id>/editing.md and
+# removes it after writing back. See references/github/.
 #
-#   issue-sync.sh create <draft-file>                     create the issue (tixforge:todo) and its working copy
+#   issue-sync.sh create <draft-file>                     create the issue (tixforge:todo); no local copy
 #   issue-sync.sh check <number> [<ticket-file>]          sync verdict, how the issue was closed, details
 #   issue-sync.sh pull <number> <ticket-file> [--accept-edited] [--dry-run]
-#                                                         rebuild the working copy from the issue; prints the diff
+#                                                         rebuild the copy from the issue; prints the diff
 #   issue-sync.sh push <number> <ticket-file> [--force] [--keep-original]
-#                                                         write the working copy to the issue
-#   issue-sync.sh adopt <number> <ticket-file>            working copy from an issue tixforge did not write
+#                                                         write the copy to the issue
+#   issue-sync.sh adopt <number> <ticket-file>            a copy from an issue tixforge did not write
 #   issue-sync.sh body <ticket-file>                      the issue body for a ticket (no GitHub access)
 #
 # check prints `<verdict>` on the first line, then key: value lines:
@@ -28,15 +29,26 @@
 #               for the release) | completed | canceled | closed-completed |
 #               closed-not-planned | closed (the last three: closed some
 #               other way, with GitHub's reason)
+#   base        same | changed | none (with a ticket file): the file against
+#               the version it was taken or last written at (.<name>.hash);
+#               changed = edits not written back yet. none: no file or hash
+#   remote      same | changed | none: the issue against that same version;
+#               changed = someone wrote to the issue since (with tixforge or
+#               directly on GitHub)
 #   title, state, state_reason, labels, assignees (logins, comma-separated; last line)
 #
-# pull records the hash it saw in <dir>/.issue-hash; push refuses (exit 5)
-# when the issue's hash has changed since, i.e. someone else pushed an edit
-# after this copy was fetched. create prints number, url, id and file.
+# pull records the hash of the issue's ticket next to the file (.<name>.hash);
+# push refuses (exit 5) when the issue has changed since, i.e. someone wrote
+# to it (with tixforge, or directly when the body has no hash line) after
+# this copy was fetched. create prints number, url and id.
 # push --keep-original first posts the current body as a comment (adopt).
+# pull into a missing snapshot.md first moves v2's working copy there
+# (ticket.md and .issue-hash next to it), so the diff shows what changed
+# on the issue since v2 last took it.
 #
 # Exit: 0 ok, 2 usage, 3 no markers, 4 edited on GitHub, 5 changed since
-#       fetched, 6 the ticket folder already exists (create), other: gh failed.
+#       fetched, 6 the ticket folder already exists (create: the issue was
+#       made, the folder was left alone), other: gh failed.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=SCRIPTDIR/lib.sh
@@ -101,6 +113,12 @@ verdict() {
 }
 
 stored_hash() { bash "$hash_sh" stored < "$tmpd/body" 2> /dev/null || true; }
+# issue_hash: the hash of the issue's ticket as it is now (title + the part
+# between the markers). The copies keep this in .<name>.hash: unlike the
+# hash written in the body, it changes with a direct edit on GitHub too,
+# and it exists when the body has no hash line.
+# Lines before the first "## " are dropped, as a copy has none (write_copy).
+issue_hash() { awk '/^## / { on = 1 } on' "$tmpd/ticket" | bash "$hash_sh" hash "$title"; }
 
 has_label() { case ",$labels," in *",$1,"*) return 0 ;; *) return 1 ;; esac }
 
@@ -161,7 +179,7 @@ closed_as() {
   echo unexpected
 }
 
-hashfile() { printf '%s/.issue-hash\n' "$(dirname "$1")"; }
+hashfile() { printf '%s/.%s.hash\n' "$(dirname "$1")" "$(basename "$1")"; }
 
 # write_copy <file> <id> <title> <ticket-body-file>
 write_copy() {
@@ -189,19 +207,13 @@ case $cmd in
     url=$(printf '%s\n' "$url" | grep -Eo 'https://[^[:space:]]+/issues/[0-9]+' | tail -1)
     n=${url##*/}
     id="GT-$(printf '%06d' "$n")"
-    file=$(ticket_file "$id")
     echo "number: $n"
     echo "url: $url"
     echo "id: $id"
-    if [ -e "$(dirname "$file")" ]; then
-      echo "the folder of $id already exists: $(dirname "$file")（手元のコピーは作っていない）" >&2
+    if [ -e "$(tf_dir)/$id" ]; then
+      echo "the folder of $id already exists: $(tf_dir)/$id" >&2
       exit 6
     fi
-    ensure_workspace
-    mkdir -p "$(dirname "$file")"
-    write_copy "$file" "$id" "$t" "$tmpd/ticket"
-    bash "$hash_sh" hash "$t" < "$tmpd/ticket" > "$(hashfile "$file")"
-    echo "file: ${file#$(tf_top)/}"
     ;;
 
   check)
@@ -223,6 +235,26 @@ case $cmd in
       fi
     fi
     echo "status: $(ticket_status "$ca")"
+    # base / remote: the copy and the issue against the version the copy was
+    # taken (or last written) at, kept in .<name>.hash.
+    if [ $# -eq 2 ]; then
+      hf=$(hashfile "$2")
+      if [ -f "$2" ] && [ -f "$hf" ]; then
+        if [ "$(bash "$hash_sh" hash "$(ticket_title "$2")" < "$tmpd/mine")" = "$(cat "$hf")" ]; then
+          echo "base: same"
+        else
+          echo "base: changed"
+        fi
+        if [ "$(issue_hash)" = "$(cat "$hf")" ]; then
+          echo "remote: same"
+        else
+          echo "remote: changed"
+        fi
+      else
+        echo "base: none"
+        echo "remote: none"
+      fi
+    fi
     echo "title: $title"
     echo "state: $state"
     echo "state_reason: $reason"
@@ -251,6 +283,17 @@ case $cmd in
     esac
     id="GT-$(printf '%06d' "$n")" # issue #42 is GT-000042
     write_copy "$tmpd/new" "$id" "$title" "$tmpd/ticket"
+    d=$(dirname "$file")
+    if [ "$(basename "$file")" = snapshot.md ] && [ ! -e "$file" ] && [ -f "$d/ticket.md" ]; then
+      if [ -n "$dry" ]; then
+        echo "would move: $d/ticket.md -> $file (v2's working copy)"
+        diff -u --label "$d/ticket.md (v2)" --label "$file (issue #$n)" "$d/ticket.md" "$tmpd/new" || true
+        exit 0
+      fi
+      mv "$d/ticket.md" "$file"
+      [ -f "$d/.issue-hash" ] && mv "$d/.issue-hash" "$(hashfile "$file")"
+      echo "moved: $d/ticket.md -> $file (v2's working copy)"
+    fi
     if [ ! -f "$file" ]; then
       if [ -n "$dry" ]; then
         echo "would create: $file"
@@ -267,7 +310,7 @@ case $cmd in
       diff -u --label "$file (before)" --label "$file (issue #$n)" "$file" "$tmpd/new"
       [ -n "$dry" ] || cat "$tmpd/new" > "$file"
     fi
-    [ -n "$dry" ] || stored_hash > "$(hashfile "$file")"
+    [ -n "$dry" ] || issue_hash > "$(hashfile "$file")"
     ;;
 
   push)
@@ -290,7 +333,7 @@ case $cmd in
       } ;;
     esac
     # Optimistic lock: the issue must still be the version this copy came from.
-    if [ -z "$force" ] && [ -f "$(hashfile "$file")" ] && [ "$(cat "$(hashfile "$file")")" != "$(stored_hash)" ]; then
+    if [ -z "$force" ] && [ -f "$(hashfile "$file")" ] && [ "$(cat "$(hashfile "$file")")" != "$(issue_hash)" ]; then
       echo "changed: issue #$n は、このコピーを取ってきた後に更新されています（他の人の edit の可能性）。取ってき直して差分を確かめてから編集し直してください" >&2
       exit 5
     fi

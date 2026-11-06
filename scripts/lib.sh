@@ -8,11 +8,11 @@ tf_top() { git rev-parse --show-toplevel 2> /dev/null || pwd; }
 # Everything tixforge keeps in a project lives under .tixforge/:
 #   .tixforge/config.yml        settings (in git, shared)
 #   .tixforge/.gitignore        keeps everything else out of git
-#   .tixforge/<id>/ticket.md    a working copy of the ticket's issue
+#   .tixforge/<id>/snapshot.md  the ticket as dev took it from the issue
+#   .tixforge/<id>/editing.md   edit's copy while it edits (removed after)
 #   .tixforge/<id>/state.md     the run of that ticket
 tf_dir() { printf '%s/.tixforge\n' "${1:-$(tf_top)}"; }
 tf_config() { printf '%s/config.yml\n' "$(tf_dir "${1:-}")"; }
-ticket_file() { printf '%s/%s/ticket.md\n' "$(tf_dir "${2:-}")" "$1"; }
 state_file() { printf '%s/%s/state.md\n' "$(tf_dir "${2:-}")" "$1"; }
 
 # ensure_workspace [top]: create .tixforge/.gitignore when it is missing, so

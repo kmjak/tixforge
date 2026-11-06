@@ -421,16 +421,26 @@ cp "$tmp/keep.yml" .tixforge/config.yml
 section="review-input.sh"
 git switch -q GT-000901-a
 echo change > file.txt && git add file.txt && git commit -q -m change
+# No snapshot yet: dev takes it when the run starts.
+out=$(bash "$scripts/review-input.sh" GT-000901 main 2> /dev/null)
+eq 3 $? "no snapshot: exit 3"
+eq "" "$out" "no snapshot: nothing written or printed"
+[ ! -e .git/tixforge/review/GT-000901 ] && ok || ng "no snapshot: no review folder"
+printf '# GT-000901: A\n\n## 背景\nスナップショット\n' > .tixforge/GT-000901/snapshot.md
 paths=$(bash "$scripts/review-input.sh" GT-000901 main)
 diff_file=$(printf '%s\n' "$paths" | sed -n 1p)
 has "+change" "$(cat "$diff_file")" "diff"
 has "/.git/tixforge/review/GT-000901/" "$diff_file" "outside .tixforge"
-eq 3 "$(printf '%s\n' "$paths" | grep -c .)" "three paths without --since"
+eq 4 "$(printf '%s\n' "$paths" | grep -c .)" "four paths without --since"
+tk=$(printf '%s\n' "$paths" | tail -1)
+has "/.git/tixforge/review/GT-000901/ticket.md" "$tk" "the ticket goes with the review input, outside .tixforge"
+has "スナップショット" "$(cat "$tk")" "the ticket is the snapshot"
 # --since writes the change after a given commit as delta.patch.
 since=$(git rev-parse HEAD)
 echo more > more.txt && git add more.txt && git commit -q -m more
 paths=$(bash "$scripts/review-input.sh" GT-000901 main --since "$since")
 delta=$(printf '%s\n' "$paths" | sed -n 4p)
+has "ticket.md" "$(printf '%s\n' "$paths" | sed -n 5p)" "the ticket comes after delta.patch"
 has "delta.patch" "$delta" "delta path"
 has "+more" "$(cat "$delta")" "delta has the new change"
 case "$(cat "$delta")" in *"+change"*) ng "delta has only the new change" ;; *) ok ;; esac
@@ -547,11 +557,11 @@ issue 42 "ログイン" "$tmp/body42" # what gh issue create makes
 out=$(is create "$tmp/draft.md")
 has "number: 42" "$out" "create prints the number"
 has "id: GT-000042" "$out" "create prints the id"
-has "file: .tixforge/GT-000042/ticket.md" "$out" "create makes the working copy"
 has "--label tixforge:todo" "$(cat "$GH_DIR/calls")" "create labels tixforge:todo"
-eq "# GT-000042: ログイン" "$(sed -n 1p .tixforge/GT-000042/ticket.md)" "working copy title line"
+[ ! -e .tixforge/GT-000042 ] && ok || ng "create makes no local copy (dev takes the snapshot)"
+mkdir -p .tixforge/GT-000042
 is create "$tmp/draft.md" > /dev/null 2>&1
-eq 6 $? "create refuses an existing ticket folder"
+eq 6 $? "create reports an existing ticket folder"
 rm -rf .tixforge/GT-000042
 has "<!-- tixforge:ticket:start -->" "$(cat "$tmp/body42")" "body has markers"
 has "この issue の本文は" "$(cat "$tmp/body42")" "notice in the document language"
@@ -584,6 +594,8 @@ has "unchanged" "$(is pull 42 .tixforge/GT-000042/ticket.md)" "pull again"
 sed 's/ログインしたい/ログインしたい（直接編集）/' "$tmp/body42" > "$tmp/edited"
 issue 42 "ログイン" "$tmp/edited" OPEN "" '[{"name":"tixforge:out-of-sync"}]'
 eq edited "$(is check 42 | sed -n 1p)" "direct edit detected"
+eq "remote: changed" "$(is check 42 .tixforge/GT-000042/ticket.md | grep '^remote:')" "remote: a direct edit counts as a change"
+eq "base: same" "$(is check 42 .tixforge/GT-000042/ticket.md | grep '^base:')" "base: the copy itself is untouched"
 issue 42 "ログイン（改）" "$tmp/body42"
 eq edited "$(is check 42 | sed -n 1p)" "direct title edit detected"
 issue 42 "ログイン" "$tmp/edited" OPEN "" '[{"name":"tixforge:out-of-sync"}]'
@@ -598,6 +610,7 @@ eq 4 $? "push refuses an edited issue"
 out=$(is push 42 .tixforge/GT-000042/ticket.md --force)
 has "updated" "$out" "push --force rehashes"
 has "removed label: tixforge:out-of-sync" "$out" "push removes out-of-sync"
+eq "base: same remote: same" "$(is check 42 .tixforge/GT-000042/ticket.md | grep '^base:\|^remote:' | paste -sd' ' -)" "after --accept-edited and push --force: same, same"
 eq in-sync "$(is check 42 | sed -n 1p)" "in sync after adopting"
 
 # Local edit (/tixforge:ticket edit) then push.
@@ -619,6 +632,22 @@ grep -v 'tixforge:hash' "$tmp/body42" > "$tmp/nohash"
 issue 44 "ログイン" "$tmp/nohash"
 eq no-hash "$(is check 44 | sed -n 1p)" "no hash"
 has "created" "$(is pull 44 .tixforge/GT-000044/ticket.md)" "pull an issue without a hash"
+eq "base: same remote: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:\|^remote:' | paste -sd' ' -)" "no hash line in the body: base and remote still work"
+tr -d '\r' < .tixforge/GT-000044/ticket.md | sed 's/$/\r/' > "$tmp/crlf44" && cp "$tmp/crlf44" .tixforge/GT-000044/ticket.md
+eq "base: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:')" "base: CRLF is not a change"
+# With no hash line in the body, a direct edit is caught by the lock.
+is pull 44 .tixforge/GT-000044/ticket.md > /dev/null
+sed 's/ログインできる/直接の変更/' "$tmp/nohash" > "$tmp/nohash2"
+issue 44 "ログイン" "$tmp/nohash2"
+sed 's/ログインしたい/私の変更/' .tixforge/GT-000044/ticket.md > "$tmp/mine44" && cp "$tmp/mine44" .tixforge/GT-000044/ticket.md
+is push 44 .tixforge/GT-000044/ticket.md > /dev/null 2>&1
+eq 5 $? "no hash line: push refuses after a direct edit"
+# Text before the first ## in the body: not a change of the copy.
+awk '{ print } /tixforge:ticket:start/ { print "前置き" }' "$tmp/nohash" > "$tmp/intro44"
+issue 44 "ログイン" "$tmp/intro44"
+rm -f .tixforge/GT-000044/ticket.md .tixforge/GT-000044/.ticket.md.hash
+is pull 44 .tixforge/GT-000044/ticket.md > /dev/null
+eq "base: same" "$(is check 44 .tixforge/GT-000044/ticket.md | grep '^base:')" "base: text before the first ## is not a change"
 
 # Canceled issue: Status / Reason come back.
 sed '1s/.*/# <ticket-id>: やめた/' "$tmp/draft.md" > "$tmp/draft45"
@@ -678,7 +707,7 @@ cp .tixforge/GT-000046/ticket.md "$tmp/mine46"
 sed 's/ログインしたい/他の人の変更/' .tixforge/GT-000046/ticket.md > "$tmp/theirs46" && cp "$tmp/theirs46" .tixforge/GT-000046/ticket.md
 is push 46 .tixforge/GT-000046/ticket.md > /dev/null # the other person's push (their copy is fresh)
 cp "$tmp/mine46" .tixforge/GT-000046/ticket.md
-bash "$scripts/ticket-hash.sh" stored < "$tmp/body42" > .tixforge/GT-000046/.issue-hash # my copy came from the old version
+bash "$scripts/ticket-hash.sh" stored < "$tmp/body42" > .tixforge/GT-000046/.ticket.md.hash # my copy came from the old version
 sed 's/ログインできる/私の変更/' "$tmp/mine46" > .tixforge/GT-000046/ticket.md
 is push 46 .tixforge/GT-000046/ticket.md > /dev/null 2>&1
 eq 5 $? "push refuses: the issue changed since it was fetched"
@@ -687,6 +716,61 @@ eq "local: differs" "$(is check 46 .tixforge/GT-000046/ticket.md | sed -n 3p)" "
 is pull 46 .tixforge/GT-000046/ticket.md > /dev/null
 eq "local: same" "$(is check 46 .tixforge/GT-000046/ticket.md | sed -n 3p)" "check: after pull the copy is the synced version"
 eq "local: missing" "$(is check 46 "$tmp/none.md" | sed -n 3p)" "check: no copy"
+# dev's snapshot and edit's editing.md keep their own hash: pulling the
+# snapshot does not lift the lock of an edit fetched before it.
+cp "$GH_DIR/issue-46.json" "$tmp/keep46"
+is pull 46 .tixforge/GT-000046/editing.md > /dev/null
+cp .tixforge/GT-000046/editing.md "$tmp/mine46b"
+sed 's/他の人の変更/さらに別の人の変更/' .tixforge/GT-000046/editing.md > "$tmp/other46"
+is push 46 "$tmp/other46" > /dev/null 2>&1 # another person's push from a fresh copy
+is pull 46 .tixforge/GT-000046/snapshot.md > /dev/null
+[ -f .tixforge/GT-000046/.snapshot.md.hash ] && [ -f .tixforge/GT-000046/.editing.md.hash ] && ok || ng "one hash file per copy"
+sed 's/ログインできる/私の変更/' "$tmp/mine46b" > .tixforge/GT-000046/editing.md
+is push 46 .tixforge/GT-000046/editing.md > /dev/null 2>&1
+eq 5 $? "pulling the snapshot keeps the edit's lock"
+has "さらに別の人の変更" "$(jq -r .body "$GH_DIR/issue-46.json")" "the other person's change is kept"
+cp "$tmp/keep46" "$GH_DIR/issue-46.json"
+rm -f .tixforge/GT-000046/editing.md .tixforge/GT-000046/.editing.md.hash .tixforge/GT-000046/snapshot.md .tixforge/GT-000046/.snapshot.md.hash
+# v2's working copy becomes the snapshot, so a change made since shows.
+is pull 46 .tixforge/GT-000046/ticket.md > /dev/null
+sed 's/他の人の変更/v2 のときの内容/' .tixforge/GT-000046/ticket.md > "$tmp/v2t" && cp "$tmp/v2t" .tixforge/GT-000046/ticket.md
+mv .tixforge/GT-000046/.ticket.md.hash .tixforge/GT-000046/.issue-hash
+out=$(is pull 46 .tixforge/GT-000046/snapshot.md)
+has "moved: " "$out" "v2's ticket.md moves to snapshot.md"
+has "v2 のときの内容" "$out" "and the diff shows what changed since"
+eq "base: same remote: same" "$(is check 46 .tixforge/GT-000046/snapshot.md | grep '^base:\|^remote:' | paste -sd' ' -)" "after the v2 move: same, same"
+[ ! -e .tixforge/GT-000046/ticket.md ] && [ -f .tixforge/GT-000046/.snapshot.md.hash ] && [ ! -e .tixforge/GT-000046/.issue-hash ] && ok || ng "ticket.md and .issue-hash are moved"
+rm -f .tixforge/GT-000046/snapshot.md .tixforge/GT-000046/.snapshot.md.hash
+# The move only for a missing snapshot.md, never in a dry run or for
+# editing.md.
+printf '# GT-000046: v2\n\n## 背景\nv2\n' > .tixforge/GT-000046/ticket.md
+out=$(is pull 46 .tixforge/GT-000046/snapshot.md --dry-run)
+has "would move: " "$out" "dry run: the move is announced"
+has "v2" "$out" "dry run: the diff is against v2's copy"
+[ -f .tixforge/GT-000046/ticket.md ] && [ ! -e .tixforge/GT-000046/snapshot.md ] && ok || ng "dry run moves nothing"
+is pull 46 .tixforge/GT-000046/editing.md > /dev/null
+[ -f .tixforge/GT-000046/ticket.md ] && ok || ng "editing.md does not take v2's copy"
+rm .tixforge/GT-000046/ticket.md
+is pull 46 .tixforge/GT-000046/snapshot.md > /dev/null
+printf '# GT-000046: v2\n' > .tixforge/GT-000046/ticket.md
+has "unchanged: " "$(is pull 46 .tixforge/GT-000046/snapshot.md)" "an existing snapshot is kept"
+[ -f .tixforge/GT-000046/ticket.md ] && ok || ng "an existing snapshot leaves v2's copy alone"
+# base / remote: the copy and the issue against the version it was taken at.
+f46=.tixforge/GT-000046/snapshot.md
+eq "base: same" "$(is check 46 "$f46" | grep '^base:')" "base: same right after pull"
+eq "remote: same" "$(is check 46 "$f46" | grep '^remote:')" "remote: same right after pull"
+sed 's/ログインできる/書き戻していない変更/' "$f46" > "$tmp/b46" && cp "$tmp/b46" "$f46"
+eq "base: changed" "$(is check 46 "$f46" | grep '^base:')" "base: changed after a local edit"
+cp "$GH_DIR/issue-46.json" "$tmp/keep46"
+{
+  cat .tixforge/GT-000046/editing.md
+  printf -- '- また誰かの変更\n'
+} > "$tmp/someone46"
+is push 46 "$tmp/someone46" > /dev/null 2>&1
+eq "remote: changed" "$(is check 46 "$f46" | grep '^remote:')" "remote: changed after someone else's push"
+eq "base: none" "$(is check 46 "$tmp/none.md" | grep '^base:')" "base: none without a copy"
+cp "$tmp/keep46" "$GH_DIR/issue-46.json"
+rm -f .tixforge/GT-000046/*.md .tixforge/GT-000046/.*.hash
 eq "assignees: " "$(is check 46 | tail -1)" "check: no assignee"
 jq '.assignees = [{"login":"me"},{"login":"someone"}]' "$GH_DIR/issue-46.json" > "$GH_DIR/t" && mv "$GH_DIR/t" "$GH_DIR/issue-46.json"
 eq "assignees: me,someone" "$(is check 46 | tail -1)" "check: assignees on the last line"

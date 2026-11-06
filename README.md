@@ -31,7 +31,7 @@ plugin には、スキル 3 つ・Review 用の agent 2 つ（`tixforge:reviewer
 |------|------|-----|
 | `.tixforge/config.yml` | 設定（下記） | 管理する（チームで共有） |
 | `.tixforge/.gitignore` | `*`・`!.gitignore`・`!config.yml`。それ以外を git から外す（プロジェクトの `.gitignore` は触らない） | 管理する |
-| `.tixforge/<id>/ticket.md` | チケットの issue の作業用コピー | 管理しない |
+| `.tixforge/<id>/snapshot.md` | dev がチケットの issue から取った版（edit は `editing.md` で書き換え、書き戻したら消す） | 管理しない |
 | `.tixforge/<id>/state.md` | run の状態（Status・ブランチ・各フェーズの記録） | 管理しない |
 | `.tixforge/<id>/history/` | 前のフェーズに戻したときの古い記録 | 管理しない |
 | `docs/context/**` | サービス・ドメインの知識、commit 規約（`commit.md`） | 管理する |

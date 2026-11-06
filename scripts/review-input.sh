@@ -18,7 +18,9 @@
 #   files.txt    git diff --name-status <fork point>..HEAD
 #   delta.patch  git diff <commit>..HEAD (only with --since: the change since
 #                the previous review round; removed otherwise)
-# Prints the paths, one per line, in that order.
+#   ticket.md    the ticket as dev took it (.tixforge/<id>/snapshot.md)
+# Prints the paths, one per line, in that order. Exit 3, writing nothing,
+# when there is no snapshot (dev takes it when the run starts).
 set -euo pipefail
 
 usage() {
@@ -50,6 +52,12 @@ if git rev-parse --verify -q "$remote" > /dev/null; then
   fi
 fi
 
+snap="$(git rev-parse --show-toplevel)/.tixforge/$id/snapshot.md"
+[ -f "$snap" ] || {
+  echo "no snapshot: ${snap}（dev がチケットを取ってくると作られる）" >&2
+  exit 3
+}
+
 dir="$(git rev-parse --absolute-git-dir)/tixforge/review/$id"
 mkdir -p "$dir"
 git diff "$fork"..HEAD > "$dir/diff.patch"
@@ -62,3 +70,5 @@ if [ -n "$since" ]; then
 else
   rm -f "$dir/delta.patch"
 fi
+cp "$snap" "$dir/ticket.md"
+printf '%s\n' "$dir/ticket.md"

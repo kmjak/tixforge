@@ -42,7 +42,7 @@ make fmt                                  # shfmt で整形（設定は .editorc
 | スクリプトは `make fmt` で整形する。手で整えない | `make lint` の `shfmt -d` |
 | PR のタイトルは Conventional Commits の形にする（下の「commit と PR」） | CI の `pr-title` |
 | dev・ticket の手順は、チケットへの操作を共通規約の「チケットの操作」の名前で呼び、状態は `issue-sync.sh check` の `status:` の言葉で扱う。issue の具体（`gh issue`・ラベル名・`closed_as`・`Closes`・issue の目印）は `references/github/` にだけ書く（`issue-sync.sh check` の呼び出しはよい） | `tests/plugin.test.sh` の「tracker operations」・`tests/scripts.test.sh` の issue-sync.sh の節 |
-| v2 が残した state.md を `migrate` で移せる（テストの中の v2 の state.md は直さない）。v2 が英語のコメントで閉じた issue を読める。v2 の `LT-`・`tracker: local`・`host: none` は「移行が要る」と示し、`LT-` の id は移行を案内するエラーにする | `tests/scripts.test.sh` の「v2 data」・issue-sync.sh・project-status.sh・ticket-id.sh の節 |
+| v2 が残した state.md を `migrate` で移せる（テストの中の v2 の state.md は直さない）。v2 が英語のコメントで閉じた issue を読める。v2 の GT の `ticket.md` と `.issue-hash` を、`pull` が `snapshot.md` に移す。v2 の `LT-`・`tracker: local`・`host: none` は「移行が要る」と示し、`LT-` の id は移行を案内するエラーにする | `tests/scripts.test.sh` の「v2 data」・issue-sync.sh・project-status.sh・ticket-id.sh の節 |
 
 ## commit と PR
 
