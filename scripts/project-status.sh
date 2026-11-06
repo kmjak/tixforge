@@ -62,15 +62,13 @@ lts=""
   && echo "- 移行が要る: repository.host: none（v3 は GitHub が必須。GitHub のリポジトリを使うなら /tixforge:project update で移す。使わないなら tixforge v2 に留まる）"
 
 open=""
-for f in "$(tf_dir "$top")"/*/state.md; do
-  [ -f "$f" ] || continue
-  s=$(field "$f" Status)
-  is_open_status "$s" || continue
-  id=${f%/state.md}
-  id=${id##*/}
-  open="${open}  - ${id}: Status ${s}、Branch $(field "$f" Branch)
+while IFS="$RUN_SEP" read -r id s b _; do
+  [ -n "$id" ] && is_open_status "$s" || continue
+  open="${open}  - ${id}: Status ${s}、Branch ${b}
 "
-done
+done << EOF
+$(each_run "$top")
+EOF
 if [ -n "$open" ]; then
   echo "- 進行中の run:"
   printf '%s' "$open"

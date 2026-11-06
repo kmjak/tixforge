@@ -280,23 +280,54 @@ tf_now() { date '+%Y-%m-%d %H:%M'; }
 # is_open_status <status>: a run that is neither done nor canceled.
 is_open_status() { case "$1" in done | canceled | '') return 1 ;; *) return 0 ;; esac }
 
+# is_early_status <status>: before the Plan is approved (no code yet).
+is_early_status() { case "$1" in research:* | approach:* | plan:*) return 0 ;; *) return 1 ;; esac }
+
+# each_run [top]: one line per run, "<id> <Status> <Branch> <Base>" joined
+# by RUN_SEP (US, \037), reading each state.md once. A field is the first
+# matching row, as field() reads it; a missing one, or an unreadable file,
+# gives empty fields. Read it with
+#   while IFS="$RUN_SEP" read -r id status branch base; do …; done <<EOF
+#   $(each_run "$top")
+#   EOF
+# not with a pipe: a pipe runs the loop in a subshell, and an exit in it
+# (the guard's decisions) would not end the script. RUN_SEP is not
+# whitespace, so read keeps an empty field (a tab would collapse it).
+RUN_SEP=$(printf '\037')
+each_run() {
+  local f id v
+  for f in "$(tf_dir "${1:-}")"/*/state.md; do
+    [ -f "$f" ] || continue
+    id=${f%/state.md}
+    id=${id##*/}
+    v=$(awk -F'|' -v sep="$RUN_SEP" '
+      { k = $2; x = $3; gsub(/^[ \t]+|[ \t]+$/, "", k); gsub(/^[ \t]+|[ \t]+$/, "", x) }
+      k == "Status" && !hs { s = x; hs = 1 }
+      k == "Branch" && !hb { b = x; hb = 1 }
+      k == "Base" && !hB { B = x; hB = 1 }
+      END { printf "%s%s%s%s%s", s, sep, b, sep, B }' "$f" 2> /dev/null) || v="$RUN_SEP$RUN_SEP"
+    printf '%s%s%s\n' "$id" "$RUN_SEP" "$v"
+  done
+}
+
 # current_runs <top> <branch>: the state.md of the open run on <branch>, or,
 # when no run is on it, of every open run before Implement (those have no
 # branch yet), one per line. Prints nothing when there is neither. v2's
 # local runs (LT-) are not runs to go on with: they wait for the migration.
 current_runs() {
-  local f st early=""
-  for f in "$(tf_dir "$1")"/*/state.md; do
-    [ -f "$f" ] || continue
-    case $f in */LT-*/state.md) continue ;; esac
-    st=$(field "$f" Status)
+  local id st br early=""
+  while IFS="$RUN_SEP" read -r id st br _; do
+    [ -n "$id" ] || continue
+    case $id in LT-*) continue ;; esac
     is_open_status "$st" || continue
-    if [ -n "$2" ] && [ "$(field "$f" Branch)" = "$2" ]; then
-      printf '%s\n' "$f"
+    if [ -n "$2" ] && [ "$br" = "$2" ]; then
+      state_file "$id" "$1"
       return 0
     fi
-    case "$st" in research:* | approach:* | plan:*) early="${early}${f}
-" ;; esac
-  done
+    is_early_status "$st" && early="${early}$(state_file "$id" "$1")
+"
+  done << EOF
+$(each_run "$1")
+EOF
   printf '%s' "$early"
 }

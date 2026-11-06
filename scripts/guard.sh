@@ -70,20 +70,20 @@ case "$tool" in
   Edit | Write | MultiEdit | NotebookEdit)
     early=""
     cur=$(git -C "$cwd" symbolic-ref --short -q HEAD 2> /dev/null || true)
-    for f in "$(tf_dir "$top")"/*/state.md; do
-      [ -f "$f" ] || continue
-      s=$(field "$f" Status)
-      case "$s" in
-        research:* | approach:* | plan:*)
-          id=${f%/state.md}
-          id=${id##*/}
-          early="${early}${early:+、}${id}（${s}）"
-          ;;
-        implement:* | review:* | pr:*)
-          [ -n "$cur" ] && [ "$(field "$f" Branch)" = "$cur" ] && exit 0
-          ;;
+    while IFS="$RUN_SEP" read -r id s b _; do
+      [ -n "$id" ] || continue
+      if is_early_status "$s"; then
+        early="${early}${early:+、}${id}（${s}）"
+        continue
+      fi
+      # On the branch of a run past its Plan: that run's work.
+      case "$s" in implement:* | review:* | pr:*)
+        [ -n "$cur" ] && [ "$b" = "$cur" ] && exit 0
+        ;;
       esac
-    done
+    done << EOF
+$(each_run "$top")
+EOF
     [ -n "$early" ] || exit 0
     path=$(printf '%s' "$input" | json_get tool_input.file_path)
     [ -n "$path" ] || path=$(printf '%s' "$input" | json_get tool_input.notebook_path)
@@ -111,18 +111,20 @@ esac
 
 branch=$(git -C "$cwd" symbolic-ref --short -q HEAD 2> /dev/null) || exit 0
 
+# The first run whose Branch this is (done or canceled ones too: pushing to
+# a finished run's branch asks), else the first open run whose Base this is.
 state=""
 base_of=""
-for f in "$(tf_dir "$top")"/*/state.md; do
-  [ -f "$f" ] || continue
-  if [ "$(field "$f" Branch)" = "$branch" ]; then
-    state=$f
+while IFS="$RUN_SEP" read -r id s b ba; do
+  [ -n "$id" ] || continue
+  if [ "$b" = "$branch" ]; then
+    state=$(state_file "$id" "$top")
     break
   fi
-  if [ -z "$base_of" ] && is_open_status "$(field "$f" Status)" && [ "$(field "$f" Base)" = "$branch" ]; then
-    base_of=$f
-  fi
-done
+  [ -z "$base_of" ] && is_open_status "$s" && [ "$ba" = "$branch" ] && base_of=$id
+done << EOF
+$(each_run "$top")
+EOF
 [ -n "$state" ] || [ -n "$base_of" ] || exit 0
 
 if [ -n "$state" ]; then
@@ -130,9 +132,7 @@ if [ -n "$state" ]; then
   base=$(field "$state" Base)
   where="ブランチ ${branch}、Status ${status}（${state#$top/}）"
 else
-  run=${base_of%/state.md}
-  run=${run##*/}
-  where="Base ブランチ ${branch}（進行中の run ${run} の Base）"
+  where="Base ブランチ ${branch}（進行中の run ${base_of} の Base）"
 fi
 
 # --- MCP -------------------------------------------------------------------

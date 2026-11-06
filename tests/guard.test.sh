@@ -280,6 +280,11 @@ set_state done
 expect pass "$tfrepo" 'git merge --no-ff GT-000001-login' # the run is closed
 set_state implement:in-progress
 git -C "$tfrepo" checkout -q GT-000001-login
+# The run whose Branch this is wins over an earlier run whose Base it is.
+mkdir -p "$tfrepo/.tixforge/GT-000000"
+printf '| Field | Value |\n|---|---|\n| Status | implement:in-progress |\n| Branch | GT-000000-x |\n| Base | GT-000001-login |\n' > "$tfrepo/.tixforge/GT-000000/state.md"
+reason_has "$tfrepo" 'git push' 'ブランチ GT-000001-login、Status implement:in-progress'
+rm -rf "$tfrepo/.tixforge/GT-000000"
 
 # A push on the branch of a finished run says so instead of "before the PR gate".
 state="finished run"
@@ -315,6 +320,14 @@ expect_tool pass "$tfrepo" Edit "{\"file_path\":\"$tfrepo/src/a.ts\"}"
 git -C "$tfrepo" checkout -q main
 expect_tool ask "$tfrepo" Edit "{\"file_path\":\"$tfrepo/src/a.ts\"}"
 git -C "$tfrepo" checkout -q GT-000001-login
+# A finished run's branch is not that run's work any more: editing asks.
+set_state done
+expect_tool ask "$tfrepo" Edit "{\"file_path\":\"$tfrepo/src/a.ts\"}"
+# Only a run in Implement, Review or PR owns its branch: an unknown Status asks.
+for st in "—" foo implement; do
+  set_state "$st"
+  expect_tool ask "$tfrepo" Edit "{\"file_path\":\"$tfrepo/src/a.ts\"}"
+done
 rm -rf "$tfrepo/.tixforge/GT-000002"
 set_state implement:in-progress
 

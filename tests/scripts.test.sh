@@ -57,6 +57,47 @@ bad=$(LC_ALL=C grep -nE '\$[A-Za-z_][A-Za-z0-9_]*[^ -~]' "$scripts"/*.sh || true
 eq "" "$bad" "no \$var directly followed by a non-ASCII character"
 
 # --- lib.sh ----------------------------------------------------------------
+section="lib.sh runs"
+# is_early_status / each_run, in a repo of their own.
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
+. "$scripts/lib.sh"
+r="$tmp/runs"
+mkdir -p "$r/.tixforge/GT-000001" "$r/.tixforge/GT-000002" "$r/.tixforge/GT-000003"
+printf '| Status | plan:in-progress |\n| Branch | — |\n| Base | main |\n' > "$r/.tixforge/GT-000001/state.md"
+printf '| Status | implement:in-progress |\n| Branch | GT-000002-b |\n' > "$r/.tixforge/GT-000002/state.md"
+printf '| Status | done |\n| Branch | GT-000003-c |\n| Base | develop |\n\n| Status | x |\n' > "$r/.tixforge/GT-000003/state.md"
+is_early_status plan:awaiting-approval && ok || ng "plan is before Implement"
+is_early_status implement:in-progress && ng "implement is not early" || ok
+out=$(each_run "$r" | tr "$RUN_SEP" '|')
+eq "GT-000001|plan:in-progress|—|main
+GT-000002|implement:in-progress|GT-000002-b|
+GT-000003|done|GT-000003-c|develop" "$out" "each_run: id, Status, Branch, Base; a missing field stays empty; the first row wins"
+n=0
+while IFS="$RUN_SEP" read -r id st br ba; do
+  [ -n "$id" ] || continue
+  [ "$id" = GT-000002 ] && [ -z "$ba" ] && n=1
+done << EOF
+$(each_run "$r")
+EOF
+eq 1 "$n" "each_run: an empty last field reads back empty"
+mkdir -p "$r/.tixforge/GT-000004"
+printf '| Status | plan:in-progress |\n| Base | main |\n' > "$r/.tixforge/GT-000004/state.md"
+n=0
+while IFS="$RUN_SEP" read -r id st br ba; do
+  [ "$id" = GT-000004 ] && [ -z "$br" ] && [ "$ba" = main ] && n=1
+done << EOF
+$(each_run "$r")
+EOF
+eq 1 "$n" "each_run: an empty field in the middle does not shift the next one"
+# The id is the folder name as is; an unreadable state.md still gives a line.
+mkdir -p "$r/.tixforge/a\\nb"
+printf '| Status | plan:in-progress |\n' > "$r/.tixforge/a\\nb/state.md"
+has 'a\nb' "$(each_run "$r" | tr "$RUN_SEP" '|' | grep '^a')" "each_run: a backslash in the id is kept"
+rm -rf "$r/.tixforge/a\\nb"
+chmod 000 "$r/.tixforge/GT-000004/state.md"
+[ -r "$r/.tixforge/GT-000004/state.md" ] || has "GT-000004|||" "$(each_run "$r" | tr "$RUN_SEP" '|')" "each_run: an unreadable state.md gives empty fields"
+chmod 644 "$r/.tixforge/GT-000004/state.md"
+
 section="lib.sh cfg"
 # shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$scripts/lib.sh"
@@ -185,7 +226,7 @@ eq 2 $? "Updated is not settable"
 eq plan:awaiting-approval "$(st set GT-000901 Status plan:awaiting-approval)" "set Status"
 st set GT-000901 Status implement:in-progress > /dev/null
 grep -q '^## Implementation Log' .tixforge/GT-000901/state.md && ok || ng "sections kept"
-eq "$(printf 'GT-000901\timplement:in-progress\tGT-000901-a')" "$(st list)" "list"
+eq "$(printf 'GT-000901\timplement:in-progress\tGT-000901-a')" "$(st list)" "list: id, Status, Branch"
 st get GT-000404 2> /dev/null
 eq 1 $? "no such run"
 eq pr:ready-to-merge "$(st set GT-000901 Status pr:ready-to-merge)" "ready-to-merge is a Status"
@@ -248,7 +289,7 @@ section="project-status.sh"
 out=$(bash "$scripts/project-status.sh")
 has "tracker=github" "$out" "config"
 has "gates=approach,plan,pr" "$out" "gates"
-has "GT-000901: Status implement:in-progress" "$out" "open run"
+has "GT-000901: Status implement:in-progress、Branch GT-000901-a" "$out" "open run, with its Branch"
 out=$(cd "$tmp" && bash "$scripts/project-status.sh")
 eq 0 $? "outside a repo exits 0"
 has "config.yml が無い" "$out" "no config"
@@ -370,6 +411,10 @@ eq "GT-000901 · implement:in-progress" "$(sl "{\"workspace\":{\"current_dir\":\
 mkdir -p sub
 eq "GT-000901 · implement:in-progress" "$(sl "{\"cwd\":\"$repo/sub\"}")" "from a subdirectory"
 rmdir sub
+# A finished run on this branch is not shown (current_runs: open runs only).
+bash "$scripts/run-state.sh" set GT-000901 Status done > /dev/null
+eq "" "$(sl "{\"cwd\":\"$repo\"}")" "a done run on this branch is not the current run"
+bash "$scripts/run-state.sh" set GT-000901 Status implement:in-progress > /dev/null
 git switch -q main
 eq "" "$(sl "{\"cwd\":\"$repo\"}")" "nothing on main with no run before Implement"
 bash "$scripts/run-state.sh" set GT-000901 Status plan:awaiting-approval > /dev/null
