@@ -322,12 +322,7 @@ case $cmd in
     printf 'format %s -> %s: %s\n' "$from" "$STATE_FORMAT" "${f#$top/}"
     ;;
   list)
-    for f in "$(tf_dir "$top")"/*/state.md; do
-      [ -f "$f" ] || continue
-      id=${f%/state.md}
-      id=${id##*/}
-      printf '%s\t%s\t%s\n' "$id" "$(field "$f" Status)" "$(field "$f" Branch)"
-    done
+    each_run "$top" | tr "$RUN_SEP" '\t' | cut -f1-3
     ;;
   *) usage ;;
 esac
