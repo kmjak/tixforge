@@ -4,7 +4,7 @@
 ## 確認
 - [ ] `make check` が通る
 - [ ] タイトルが Conventional Commits の形で、種類が合っている（手順書や templates の変更は `docs` ではなく `feat` / `fix`。CLAUDE.md）
-- [ ] `templates/github/` を変えたなら、先頭の版数を上げた
+- [ ] `templates/github/` を変えたなら、先頭の版数を上げた（`tixforge/messages.yml` は版数を持たないので除く）
 - [ ] README・`references/` の説明を合わせた
 
 ## 関連
