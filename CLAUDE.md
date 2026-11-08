@@ -28,7 +28,7 @@ make fmt                                  # shfmt で整形（設定は .editorc
 
 - 結果が 1 つに決まる処理と、一字も変えずに写すべき処理は `scripts/` に置き、`tests/` で確かめる。gh はスタブに置き換える。手順ファイルの文章は、守られるとは限らないため。
 - 手順ファイルは使う場面で Read させ、SKILL.md と共通規約は短く保つ。毎回読まれるため。
-- `templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` は版数で更新の有無を判断する。
+- `templates/github/` を変えたら、先頭のコメントの版数（`(v3)` など）を上げる。`/tixforge:project update` は版数で更新の有無を判断する。`templates/github/tixforge/messages.yml` は版数を持たない（update が内容で比べる）。
 - state.md の形を変えたら、`run-state.sh` の `STATE_FORMAT` を上げ、`migrate` に前の形式から移す段を足す。plugin を更新しても、利用者の手元の state.md は書き換わらないため。
 
 ### テストで守るもの
