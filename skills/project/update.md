@@ -43,7 +43,7 @@ plugin を更新しても、プロジェクトにコピーしたファイルは�
 | プロジェクトのファイル | plugin 側 | 比べ方 |
 |------------------------|-----------|--------|
 | `.github/workflows/tixforge-issue-sync.yml`・`tixforge-pr-link.yml`・`tixforge-issue-guard.yml` | `<plugin>/templates/github/` の同名ファイル | 先頭のコメントのバージョン（`(v2)` など）と内容 |
-| `.github/tixforge/ticket-hash.sh`・`messages.yml` | `<scripts>/` の同名ファイル | 内容（ハッシュの計算方法がずれると、直接編集の誤検知になる） |
+| `.github/tixforge/ticket-hash.sh`・`messages.yml` | `<scripts>/ticket-hash.sh`・`<plugin>/templates/github/tixforge/messages.yml` | 内容（ハッシュの計算方法がずれると、直接編集の誤検知になる） |
 | `.github/ISSUE_TEMPLATE/tixforge-ticket.yml` | `<plugin>/templates/github/ISSUE_TEMPLATE/` | バージョン（訳した見出しはプロジェクト側を保つ） |
 | `.github/workflows/tixforge-ci.yml` | `<plugin>/templates/github/tixforge-ci.yml` | バージョンだけ。中身はプロジェクトに合わせて埋めたものなので置き換えない。雛形の変更点（差分）を示し、取り込むか尋ねる |
 

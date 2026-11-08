@@ -63,11 +63,13 @@ lt_pending() {
 # issue_of <id>: the issue number of a GT id, or nothing.
 issue_of() { case "$1" in GT-*) printf '%s\n' "${1#GT-}" | sed 's/^0*//' ;; esac }
 
-# msg <key>: a fixed message in the document language, from messages.yml
-# next to the scripts (English when the language has none).
+# msg <key>: a fixed message in the document language, from
+# templates/github/tixforge/messages.yml (the file init copies to the
+# project's .github/tixforge/ for the Actions). English when the language
+# has none.
 msg() {
   local lang file v
-  file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/messages.yml"
+  file="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/templates/github/tixforge/messages.yml"
   lang=$(cfg language)
   lang=${lang:-ja}
   v=$(cfg "$lang.$1" "$file")
