@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse guard for tixforge, shipped in the tixforge plugin's hooks/hooks.json
-# with the matcher Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*. It runs
+# with the matcher Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*[Gg][Ii][Tt].*
+# (the MCP tools it looks at: their names contain git). It runs
 # for those tools in every project and acts only where a tixforge run is
 # involved:
 #

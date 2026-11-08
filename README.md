@@ -115,7 +115,7 @@ plugin を有効にしていれば、スキルを起動していないセッシ�
 
 | hook | イベント | 内容 |
 |------|----------|------|
-| `scripts/guard.sh` | PreToolUse（`Bash\|Edit\|Write\|MultiEdit\|NotebookEdit\|mcp__.*`） | push・PR 作成・許可リスト外の git / gh 操作に確認画面を出し、force push と `Closes` の無い PR をブロックする。Plan の承認前の run があるときのコード編集にも確認画面を出す |
+| `scripts/guard.sh` | PreToolUse（`Bash\|Edit\|Write\|MultiEdit\|NotebookEdit` と、名前に git を含む MCP） | push・PR 作成・許可リスト外の git / gh 操作に確認画面を出し、force push と `Closes` の無い PR をブロックする。Plan の承認前の run があるときのコード編集にも確認画面を出す |
 | `scripts/session-start.sh` | SessionStart（`compact\|resume`） | 会話の要約・再開の後、進行中の run と、読み直す手順ファイルを Claude に伝える |
 
 `guard.sh` の判定：

@@ -4,7 +4,8 @@
 #   2. every script a hook runs exists
 #   3. every plugin path the skills, references, agents and README name exists
 #      (a renamed file is otherwise read by Claude as missing, silently)
-#   4. dev and ticket name the ticket operations, not the GitHub issue details
+#   4. hooks.json starts the guard only for the tools it decides on
+#   5. dev and ticket name the ticket operations, not the GitHub issue details
 #
 # Needs jq. Usage: bash tests/plugin.test.sh
 set -u
@@ -68,6 +69,21 @@ while IFS= read -r p; do
   [ -e "$p" ] && ok || ng "a document names a missing file: $p ($(grep -lF "$p" $docs | tr '\n' ' '))"
 done <<< "$refs"
 [ "$n" -gt 20 ] && ok || ng "the documents name plugin files ($n found)"
+
+# --- guard matcher -----------------------------------------------------------
+# hooks.json starts the guard only for the tools it decides on: Bash, the
+# edit tools and MCP tools whose name contains git (guard.sh skips other
+# MCP tools). A tool the guard looks at must match; another MCP must not.
+# Claude Code tests the matcher as an unanchored regex (a match anywhere
+# in the tool name), so the test does too.
+section="guard matcher"
+m=$(jq -r '.hooks.PreToolUse[0].matcher' hooks/hooks.json)
+for t in Bash Edit Write MultiEdit NotebookEdit mcp__github__merge_pull_request mcp__GitHub__push_files mcp__gitlab__create_merge_request; do
+  printf '%s\n' "$t" | grep -Eq "$m" && ok || ng "matcher misses $t"
+done
+for t in mcp__Neon__run_sql mcp__claude-in-chrome__navigate Read Grep; do
+  printf '%s\n' "$t" | grep -Eq "$m" && ng "matcher starts the guard for $t" || ok
+done
 
 # --- tracker operations ----------------------------------------------------
 # dev and ticket call the ticket operations by name (references/common.md,
